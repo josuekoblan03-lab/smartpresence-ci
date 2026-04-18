@@ -1,4 +1,4 @@
-﻿// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // Variables Globales
 // ─────────────────────────────────────────────────────────────
 let currentAppareilId = null; 
@@ -424,15 +424,15 @@ function computeYaw(landmarks) {
   return distLeft / distRight;
 }
 
-function computeSmile(landmarks) {
-  const mouth = landmarks.getMouth();
-  const leftEye = landmarks.getLeftEye();
-  const rightEye = landmarks.getRightEye();
-  const dist = (p1, p2) => Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+function computePitch(landmarks) {
+  const positions = landmarks.positions;
+  const bridge = positions[27]; // Entre les yeux
+  const tip = positions[30];    // Bout du nez
+  const chin = positions[8];    // Menton
   
-  const mouthWidth = dist(mouth[0], mouth[6]);
-  const eyesWidth = dist(leftEye[0], rightEye[3]);
-  return mouthWidth / eyesWidth;
+  const distTop = Math.abs(tip.y - bridge.y);
+  const distBot = Math.abs(chin.y - tip.y);
+  return distBot / (distTop || 1);
 }
 
 async function startBiometricScan() {
@@ -459,7 +459,8 @@ async function startBiometricScan() {
       const actions = [
         { id: 'gauche', msg: "Tournez la tête à GAUCHE ⬅️" },
         { id: 'droite', msg: "Tournez la tête à DROITE ➡️" },
-        { id: 'sourire', msg: "Faites un grand SOURIRE 😁" }
+        { id: 'haut', msg: "Levez la tête vers le HAUT ⬆️" },
+        { id: 'bas', msg: "Baissez la tête vers le BAS ⬇️" }
       ];
       const targetAction = actions[Math.floor(Math.random() * actions.length)];
       let actionReussie = false;
@@ -477,7 +478,6 @@ async function startBiometricScan() {
         
         const resized = faceapi.resizeResults(detections, displaySize);
         canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-        faceapi.draw.drawFaceLandmarks(canvas, resized);
 
         if (detections.length === 0) {
            bioStatus.textContent = "Aucun visage détecté";
@@ -499,9 +499,12 @@ async function startBiometricScan() {
         } else if (targetAction.id === 'droite') {
            const yaw = computeYaw(landmarks);
            if (yaw < 0.6) targetReached = true;
-        } else if (targetAction.id === 'sourire') {
-           const smile = computeSmile(landmarks);
-           if (smile > 1.05) targetReached = true;
+        } else if (targetAction.id === 'haut') {
+           const pitch = computePitch(landmarks);
+           if (pitch > 2.2) targetReached = true;
+        } else if (targetAction.id === 'bas') {
+           const pitch = computePitch(landmarks);
+           if (pitch < 0.6) targetReached = true;
         }
 
         if (targetReached && !actionReussie) { 
