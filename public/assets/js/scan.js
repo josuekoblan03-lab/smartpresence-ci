@@ -580,9 +580,33 @@ async function loadFaceModels() {
 function getExactGPSPosition() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject('GPS non supporté');
+      reject('GPS non supporté par ce navigateur');
       return;
     }
+    
+    const successCb = (pos) => resolve({lat: pos.coords.latitude, lng: pos.coords.longitude});
+    
+    const errorCb = (err) => {
+      let msg = 'Erreur GPS inconnue';
+      if (err.code === 1) msg = 'Localisation refusée. Sur iPhone, allez dans Réglages > Safari > Position et autorisez le site.';
+      if (err.code === 2) msg = 'Position indisponible (signal GPS faible).';
+      if (err.code === 3) msg = 'Délai dttente dépassé pour la localisation.';
+      
+      // Fallback si haute précision échoue (sauf si refusé)
+      if (err.code !== 1) {
+        navigator.geolocation.getCurrentPosition(successCb, () => reject(msg), { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 });
+      } else {
+        reject(msg);
+      }
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      successCb,
+      errorCb,
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+    );
+  });
+}
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({lat: pos.coords.latitude, lng: pos.coords.longitude}),
       (err) => reject(err),
