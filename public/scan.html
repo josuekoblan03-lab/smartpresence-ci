@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="/assets/css/scan.css">
   <!-- QRCode.js — Lib JS pour scanner et afficher les QR Codes -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Face-API.js — Reconnaissance faciale et Liveness -->
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 </head>
 <body>
   <div class="scan-page">
@@ -76,6 +78,27 @@
 
       <!-- Formulaire de marquage -->
       <div id="presence-form-container">
+        
+        <!-- Scanner Biométrique (caché par défaut) -->
+        <div id="biometric-scanner" class="mb-6 hidden" style="text-align: center; border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.2);">
+          <div class="scan-form-title" style="color: var(--color-accent);"><span class="icon">📷</span> Reconnaissance Faciale & GPS</div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 12px;">Veuillez <strong>cligner des yeux</strong> pour valider votre présence. Ne bougez pas l'appareil.</p>
+          
+          <div style="position: relative; width: 100%; max-width: 300px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+            <video id="videoElement" autoplay muted playsinline style="width: 100%; height: auto; transform: scaleX(-1); display: block;"></video>
+            <canvas id="faceCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+            
+            <div id="liveness-overlay" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); color: white; font-weight: bold; flex-direction: column; z-index: 10;">
+              <div class="spinner" id="bio-spinner" style="margin-bottom: 10px; width: 30px; height: 30px; border-top-color: var(--color-accent); border-right-color: var(--color-accent);"></div>
+              <span id="bio-status" style="font-size: 0.85rem; padding: 0 10px; text-align: center;">Initialisation des modules...</span>
+            </div>
+          </div>
+          
+          <div style="margin-top: 10px; font-size: 0.75rem; color: var(--color-success); font-weight: bold;" id="gps-status" class="hidden">
+            📍 Position GPS Verrouillée
+          </div>
+        </div>
+
         <div class="scan-form-title">Saisissez vos informations</div>
         <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:20px;">
           Votre matricule et code personnel vous ont été fournis par l'administration.
@@ -110,8 +133,8 @@
             </div>
           </div>
 
-          <!-- Token QR (pré-rempli depuis URL) -->
-          <div class="form-group mb-4">
+          <!-- Token QR (pré-rempli depuis URL) - MASQUE COMME DEMANDE -->
+          <div class="form-group mb-4" style="display: none;">
             <label class="form-label">📱 Token QR Code</label>
             <div class="input-with-icon">
               <span class="input-icon">🔲</span>
@@ -145,14 +168,14 @@
     <!-- Barre de statut -->
     <div class="scan-status-bar">
       <div class="live-dot" id="status-dot" style="width:6px;height:6px;background:var(--color-accent);animation:pulse 2s infinite;"></div>
-      <span id="status-text">Système actif · 6 boucliers anti-fraude en ligne</span>
+      <span id="status-text">Système actif · 9 boucliers anti-fraude en ligne</span>
     </div>
   </div>
 
   <!-- Toast -->
   <div id="toast-container"></div>
 
-  <script src="/assets/js/app.js"></script>
-  <script src="/assets/js/scan.js"></script>
+  <script src="/assets/js/app.js?v=4"></script>
+  <script src="/assets/js/scan.js?v=4"></script>
 </body>
 </html>
