@@ -36,7 +36,7 @@ L'étudiant qui souhaite falsifier ou contourner sa présence se heurtera de ple
 
 | Bouclier | Description de la technologie de Protection |
 | :--- | :--- |
-| **🌐 Verrouillage GPS Local** | Exige la géolocalisation stricte du périphérique de l'élève ! Si la latitude / longitude ne matche pas avec la salle de classe de l'enceinte de l'université : l'étudiant est immédiatement flaggé. |
+| **🌐 Verrou GPS Stationnaire** | Le système capte directement la position initiale dès le scan du QR. Si l'étudiant se déplace physiquement (ex: en marchant, en voiture) avant de réussir le test de reconnaissance faciale, le mouvement est détecté et la validation est complètement bloquée. |
 | **🤖 Preuve de vie (Liveness)** | Le serveur IA n'accepte *aucune* photo figée. En direct, l'étudiant doit effectuer des mouvements dynamiques (**Tourner la tête, Sourire...**) via son appareil. Une photo sur papier est rejetée avec un avertissement. |
 | **👁️ Empreinte à 512-Dimensions** | Une fois le Liveness passé, la photo est transformée en Vecteur 512D. Le serveur C++ va comparer à **0.55 de Marge Cosinus (Cosine Distance)** cette image avec le matricule de l'étudiant enregistré le 1er jour pour s'assurer que c'est bien la même personne physique. |
 | **🕵️‍♂️ Blocage "Bon Samaritain"** | Un étudiant possède et confirme son propre visage mais remplace son matricule par celui de son ami ? Le C++ fouille la Session : *"Ce visage a déjà marqué sa présence sous un autre nom aujourd'hui"*. **Triche bloquée instantanément.** |
