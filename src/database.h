@@ -113,6 +113,7 @@ public:
     bool          create_utilisateur(const Utilisateur& u);
     Utilisateur   find_user_by_email(const std::string& email);
     Utilisateur   find_user_by_id(int id);
+    std::vector<Utilisateur> list_enseignants(int universite_id = 0);
 
     // ── Étudiants ──
     bool         create_etudiant(const Etudiant& e);

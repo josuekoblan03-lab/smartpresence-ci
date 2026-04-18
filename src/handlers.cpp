@@ -591,6 +591,65 @@ HttpResponse create_student(const HttpRequest& req, Database& db) {
 }
 
 // ──────────────────────────────────────────────────────────────
+// GET /api/teachers
+// ──────────────────────────────────────────────────────────────
+HttpResponse list_enseignants(const HttpRequest& req, Database& db) {
+    JWTClaims claims = get_claims(req);
+    if (!claims.valid) return HttpResponse::error(401, "Non authentifié");
+    if (claims.role != "admin") return HttpResponse::error(403, "Admin requis");
+
+    auto enseignants = db.list_enseignants(1); // 1 = IUA
+    std::ostringstream json;
+    json << "{\"success\":true,\"teachers\":[";
+    for (size_t i = 0; i < enseignants.size(); i++) {
+        if (i > 0) json << ",";
+        auto& p = enseignants[i];
+        json << "{"
+             << utils::json_num("id",      p.id)            << ","
+             << utils::json_str("nom",     p.nom)           << ","
+             << utils::json_str("prenom",  p.prenom)        << ","
+             << utils::json_str("email",   p.email)         << ","
+             << utils::json_bool("actif",  p.actif)
+             << "}";
+    }
+    json << "]}";
+    return HttpResponse::ok(json.str());
+}
+
+// ──────────────────────────────────────────────────────────────
+// POST /api/teachers
+// ──────────────────────────────────────────────────────────────
+HttpResponse create_enseignant(const HttpRequest& req, Database& db) {
+    JWTClaims claims = get_claims(req);
+    if (!claims.valid) return HttpResponse::error(401, "Non authentifié");
+    if (claims.role != "admin") return HttpResponse::error(403, "Admin requis");
+
+    Utilisateur u;
+    u.nom            = utils::json_get_str(req.body, "nom");
+    u.prenom         = utils::json_get_str(req.body, "prenom");
+    u.email          = utils::json_get_str(req.body, "email");
+    std::string pass = utils::json_get_str(req.body, "password");
+    u.role           = "enseignant";
+    u.universite_id  = 1; // IUA
+
+    if (u.nom.empty() || u.prenom.empty() || u.email.empty() || pass.empty()) {
+        return HttpResponse::error(400, "Nom, prénom, email et mot de passe requis");
+    }
+
+    u.password_hash = utils::hash_password(pass);
+
+    if (!db.create_utilisateur(u)) {
+        return HttpResponse::error(409, "Cet email est déjà utilisé");
+    }
+
+    return HttpResponse::created(
+        "{\"success\":true," +
+        utils::json_str("message", "Professeur créé avec succès") +
+        "}"
+    );
+}
+
+// ──────────────────────────────────────────────────────────────
 // GET /api/filieres
 // ──────────────────────────────────────────────────────────────
 HttpResponse list_filieres(const HttpRequest& req, Database& db) {

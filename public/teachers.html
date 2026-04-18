@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Professeurs — SMARTPRESENCE CI</title>
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon" style="background:#fff;overflow:hidden;padding:3px;">
+        <img src="/assets/img/logo-iua.jpg" alt="IUA" style="width:100%;height:100%;object-fit:contain;border-radius:6px;">
+      </div>
+      <div class="sidebar-logo-text">
+        <div class="app-name">SMARTPRESENCE</div>
+        <div class="app-subtitle">IUA · Côte d'Ivoire</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a href="/dashboard.html" class="nav-item"><span class="nav-item-icon">📊</span> Tableau de bord</a>
+      <a href="/session.html"   class="nav-item"><span class="nav-item-icon">📅</span> Sessions</a>
+      <a href="/students.html"  class="nav-item"><span class="nav-item-icon">👥</span> Étudiants</a>
+      <a href="/teachers.html"  class="nav-item active admin-only"><span class="nav-item-icon">👨‍🏫</span> Professeurs</a>
+      <a href="/reports.html"   class="nav-item"><span class="nav-item-icon">📈</span> Rapports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-details">
+          <div class="user-name" id="user-display-name">...</div>
+          <div class="user-role" id="user-display-role">—</div>
+        </div>
+        <button onclick="logout()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;">🚪</button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <header class="app-header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+      <div class="header-title">👨‍🏫 Corps Enseignant</div>
+    </div>
+    <div class="header-right">
+      <span id="teacher-count" class="badge badge-info">0 professeur</span>
+      <button class="btn btn-primary btn-sm admin-only" onclick="openAddModal()">➕ Ajouter</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Filtres -->
+    <div class="card mb-6">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="form-group" style="margin:0;flex:1;min-width:180px;">
+          <label class="form-label">🔍 Recherche</label>
+          <input type="text" id="search-input" class="form-input"
+            placeholder="Nom, prénom ou email..."
+            oninput="filterTeachers()">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadTeachers()">↺ Rafraîchir</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nom & Prénom</th>
+              <th>Email</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="teachers-tbody">
+            <tr>
+              <td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">
+                <div class="spinner" style="margin:0 auto 12px;"></div> Chargement...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Ajout Professeur (admin only) -->
+<div class="modal-overlay hidden" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">➕ Ajouter un professeur</div>
+    <form id="add-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Nom *</label>
+          <input type="text" id="new-nom" class="form-input" placeholder="KONÉ" required style="text-transform:uppercase;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prénom *</label>
+          <input type="text" id="new-prenom" class="form-input" placeholder="Amadou" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email (Identifiant) *</label>
+        <input type="email" id="new-email" class="form-input" placeholder="prof.kone@iua.ci" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe *</label>
+        <input type="password" id="new-password" class="form-input" placeholder="********" required>
+      </div>
+      
+      <div id="add-error" class="alert alert-error hidden"><span>⚠️</span><span id="add-error-text"></span></div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-full" onclick="closeAddModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-full">Créer le compte</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/assets/js/app.js"></script>
+<script>
+let allTeachers = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  if (user.role !== 'admin') {
+      window.location.href = '/dashboard.html';
+      return;
+  }
+  fillUserInfo(user);
+  await loadTeachers();
+  document.getElementById('add-form').addEventListener('submit', addTeacher);
+});
+
+async function loadTeachers() {
+  try {
+    const res  = await apiFetch('/api/teachers');
+    const data = await res.json();
+    allTeachers = data.teachers || [];
+
+    document.getElementById('teacher-count').textContent = allTeachers.length + ' professeur(s)';
+    renderTeachers(allTeachers);
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function renderTeachers(teachers) {
+  const tbody = document.getElementById('teachers-tbody');
+  if (!teachers.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">Aucun professeur trouvé</td></tr>';
+    return;
+  }
+  tbody.innerHTML = teachers.map((p, i) => `
+    <tr>
+      <td style="color:var(--text-muted);font-size:0.82rem;">${i+1}</td>
+      <td>
+        <div style="font-weight:600;color:var(--text-primary);">${escHtml(p.nom)} ${escHtml(p.prenom)}</div>
+      </td>
+      <td><span class="badge badge-info" style="font-family:var(--font-mono);">${escHtml(p.email)}</span></td>
+      <td>
+        ${p.actif 
+          ? '<span class="badge badge-success">Actif</span>' 
+          : '<span class="badge badge-danger">Désactivé</span>'}
+      </td>
+      <td>
+        <button class="btn btn-ghost btn-sm" disabled>📝 Éditer</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterTeachers() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  
+  let filtered = allTeachers;
+  if (q) {
+    filtered = filtered.filter(p =>
+      p.nom.toLowerCase().includes(q) ||
+      p.prenom.toLowerCase().includes(q) ||
+      p.email.toLowerCase().includes(q)
+    );
+  }
+  renderTeachers(filtered);
+}
+
+function openAddModal() { document.getElementById('add-modal').classList.remove('hidden'); }
+function closeAddModal() { document.getElementById('add-modal').classList.add('hidden'); }
+
+async function addTeacher(e) {
+  e.preventDefault();
+  const body = {
+    nom:      document.getElementById('new-nom').value.trim().toUpperCase(),
+    prenom:   document.getElementById('new-prenom').value.trim(),
+    email:    document.getElementById('new-email').value.trim().toLowerCase(),
+    password: document.getElementById('new-password').value
+  };
+
+  try {
+    const res  = await apiFetch('/api/teachers', { method: 'POST', body: JSON.stringify(body) });
+    const data = await res.json();
+
+    if (data.success) {
+      showToast('success', `✅ Professeur ${body.nom} créé avec succès`);
+      closeAddModal();
+      // Reset form
+      document.getElementById('add-form').reset();
+      await loadTeachers();
+    } else {
+      document.getElementById('add-error-text').textContent = data.error;
+      document.getElementById('add-error').classList.remove('hidden');
+    }
+  } catch(err) {
+    showToast('error', 'Erreur serveur');
+  }
+}
+</script>
+</body>
+</html>

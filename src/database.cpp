@@ -251,6 +251,31 @@ Utilisateur Database::find_user_by_id(int id) {
     return u;
 }
 
+std::vector<Utilisateur> Database::list_enseignants(int universite_id) {
+    std::vector<Utilisateur> liste;
+    std::string sql = "SELECT id, email, nom, prenom, role, universite_id, actif, created_at "
+                      "FROM utilisateurs WHERE role = 'enseignant'";
+    if (universite_id > 0) {
+        sql += " AND universite_id = " + std::to_string(universite_id);
+    }
+    sql += " ORDER BY nom ASC";
+
+    auto rows = query(sql);
+    for (auto& r : rows) {
+        Utilisateur u;
+        u.id = std::stoi(r["id"]);
+        u.email = r["email"];
+        u.nom = r["nom"];
+        u.prenom = r["prenom"];
+        u.role = r["role"];
+        u.universite_id = std::stoi(r["universite_id"]);
+        u.actif = std::stoi(r["actif"]) != 0;
+        u.created_at = std::stoll(r["created_at"]);
+        liste.push_back(u);
+    }
+    return liste;
+}
+
 // ──────────────────────────────────────────────────────────────
 // FILIÈRES
 // ──────────────────────────────────────────────────────────────

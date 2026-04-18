@@ -154,6 +154,15 @@ void Router::register_routes() {
         return handlers::get_student(req, db_);
     }, true);
 
+    // ── Enseignants ──
+    add_route("GET",  "/api/teachers",         [this](const HttpRequest& req) {
+        return handlers::list_enseignants(req, db_);
+    }, true, true);  // Admin seulement
+
+    add_route("POST", "/api/teachers",         [this](const HttpRequest& req) {
+        return handlers::create_enseignant(req, db_);
+    }, true, true);  // Admin seulement
+
     // ── Filières ──
     add_route("GET",  "/api/filieres",         [this](const HttpRequest& req) {
         return handlers::list_filieres(req, db_);

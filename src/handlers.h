@@ -36,6 +36,9 @@ HttpResponse list_presences(const HttpRequest& req, Database& db);
 HttpResponse list_students(const HttpRequest& req, Database& db);
 HttpResponse get_student(const HttpRequest& req, Database& db);
 HttpResponse create_student(const HttpRequest& req, Database& db);
+// ── Enseignants ──
+HttpResponse list_enseignants(const HttpRequest& req, Database& db);
+HttpResponse create_enseignant(const HttpRequest& req, Database& db);
 
 // ── Filières ──
 HttpResponse list_filieres(const HttpRequest& req, Database& db);
