@@ -315,7 +315,7 @@ HttpResponse get_public_session_info(const HttpRequest& req, Database& db) {
     SessionCours s = db.find_session_by_id(sid);
     if (s.id == 0 || !s.actif) return HttpResponse::error(404, "Session introuvable");
 
-    std::string json = "{\"success\":true,\"session\":{\"titre\":\"" + s.titre + "\",\"date_creation\":\"" + s.date_creation + "\"}}";
+    std::string json = "{\"success\":true,\"session\":{\"titre\":\"" + s.titre + "\",\"date_creation\":\"" + utils::format_datetime(s.date_debut) + "\"}}";
     return HttpResponse::ok(json);
 }
 
