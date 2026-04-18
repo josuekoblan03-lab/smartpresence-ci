@@ -169,12 +169,13 @@ void Router::register_routes() {
         return handlers::report_session(req, db_);
     }, true);
 
-    // ── SSE ──
-    // Note: Le handler SSE est spécial — il garde la connexion ouverte
-    // Il est géré directement par le serveur via un cas particulier
+    // ── Events polling (remplace SSE pour Railway) ──
     add_route("GET",  "/api/sse/events",       [this](const HttpRequest& req) {
-        // Le client_fd est passé via un mécanisme spécial (voir main.cpp)
-        return handlers::sse_stream(req, -1);
+        return handlers::get_events_poll(req, db_);
+    }, false);
+
+    add_route("GET",  "/api/events",           [this](const HttpRequest& req) {
+        return handlers::get_events_poll(req, db_);
     }, false);
 
     std::cout << "[Router] " << routes_.size() << " routes enregistrées" << std::endl;

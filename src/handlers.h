@@ -46,7 +46,7 @@ HttpResponse list_frauds(const HttpRequest& req, Database& db);
 // ── Rapports ──
 HttpResponse report_session(const HttpRequest& req, Database& db);
 
-// ── SSE ──
-HttpResponse sse_stream(const HttpRequest& req, int client_fd);
+// ── Events Polling (fallback pour Railway) ──
+HttpResponse get_events_poll(const HttpRequest& req, Database& db);
 
 } // namespace handlers

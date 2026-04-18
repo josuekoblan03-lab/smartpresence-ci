@@ -69,9 +69,21 @@ void SSEManager::remove_client(int fd) {
 // ─────────────────────────────────────────
 void SSEManager::broadcast(const std::string& event, const std::string& json_data) {
     std::lock_guard<std::mutex> lock(mutex_);
+    
+    // Garder en mémoire pour le polling
+    SSEEvent ev;
+    ev.id = next_event_id_++;
+    ev.event = event;
+    ev.data = json_data;
+    recent_events_.push_back(ev);
+    // Limiter la taille du buffer
+    if (recent_events_.size() > 50) {
+        recent_events_.erase(recent_events_.begin());
+    }
+
     std::string msg = format_event(event, json_data);
 
-    std::cout << "[SSE] Broadcast '" << event << "' → " << clients_.size() << " client(s)" << std::endl;
+    std::cout << "[SSE] Broadcast (" << ev.id << ") '" << event << "' → " << clients_.size() << " client(s)" << std::endl;
 
     // Marquer les clients morts
     for (auto& client : clients_) {
@@ -93,6 +105,17 @@ void SSEManager::broadcast(const std::string& event, const std::string& json_dat
 int SSEManager::client_count() {
     std::lock_guard<std::mutex> lock(mutex_);
     return (int)clients_.size();
+}
+
+std::vector<SSEEvent> SSEManager::get_recent_events(int since_id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<SSEEvent> result;
+    for (const auto& ev : recent_events_) {
+        if (ev.id > since_id) {
+            result.push_back(ev);
+        }
+    }
+    return result;
 }
 
 // ─────────────────────────────────────────

@@ -3,7 +3,8 @@
    SMARTPRESENCE CI
    ============================================================ */
 
-let sseSource = null;
+let pollInterval = null;
+let lastEventId = 0;
 let feedEmpty = true;
 
 // ─────────────────────────────────────────
@@ -30,8 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Charger sessions récentes
   await loadRecentSessions();
 
-  // Connecter SSE
-  connectSSE();
+  // Connecter Live Feed (Polling)
+  connectLiveFeed();
 });
 
 // ─────────────────────────────────────────
@@ -154,89 +155,78 @@ async function loadRecentSessions() {
 }
 
 // ─────────────────────────────────────────
-// SSE — Server-Sent Events
+// TEMPS RÉEL — Polling (Railway Fallback)
 // ─────────────────────────────────────────
-function connectSSE() {
-  if (sseSource) {
-    sseSource.close();
-  }
+function connectLiveFeed() {
+  if (pollInterval) clearInterval(pollInterval);
+  
+  // Faire un premier appel immédiatement
+  fetchEvents();
+  
+  // Poller toutes les 3 secondes
+  pollInterval = setInterval(fetchEvents, 3000);
+}
 
-  const sseStatus    = document.getElementById('sse-status');
-  const feedLive     = document.getElementById('feed-live-indicator');
-
+async function fetchEvents() {
   try {
-    sseSource = new EventSource('/api/sse/events');
-
-    sseSource.addEventListener('connected', (e) => {
-      const data = JSON.parse(e.data);
-      updateSSEStatus(true);
-      console.log('[SSE] Connecté:', data);
-    });
-
-    // ── Présence marquée ──
-    sseSource.addEventListener('presence_marked', (e) => {
-      const data = JSON.parse(e.data);
-      addFeedItem('presence', '✅',
-        `${escHtml(data.etudiant_nom)} — présence enregistrée`,
-        `${escHtml(data.matricule)} · Session #${data.session_id}`,
-        data.timestamp
-      );
-      // Rafraîchir les stats
-      loadStats();
-      showToast('success', `✅ Présence : ${data.etudiant_nom}`);
-    });
-
-    // ── Fraude détectée ──
-    sseSource.addEventListener('fraud_detected', (e) => {
-      const data = JSON.parse(e.data);
-      addFeedItem('fraud', '🚨',
-        `Fraude détectée : ${escHtml(data.type_fraude)}`,
-        `${escHtml(data.description)} · IP: ${escHtml(data.ip)}`,
-        new Date().toLocaleTimeString('fr-FR')
-      );
-      loadStats();
-      showToast('error', `🚨 Fraude : ${data.type_fraude}`, 6000);
-    });
-
-    // ── QR Code renouvelé ──
-    sseSource.addEventListener('qr_refresh', (e) => {
-      const data = JSON.parse(e.data);
-      addFeedItem('qr', '🔄',
-        `QR Code renouvelé — Session #${data.session_id}`,
-        `Nouveau token actif · Expire dans ${data.expires_in}s`,
-        new Date().toLocaleTimeString('fr-FR')
-      );
-    });
-
-    // ── Heartbeat ──
-    sseSource.addEventListener('heartbeat', () => {
-      updateSSEStatus(true);
-    });
-
-    sseSource.onerror = () => {
-      updateSSEStatus(false);
-      // Reconnexion automatique après 5 secondes
-      setTimeout(() => {
-        if (sseSource.readyState === EventSource.CLOSED) {
-          console.log('[SSE] Reconnexion...');
-          connectSSE();
-        }
-      }, 5000);
-    };
-
-  } catch(e) {
-    console.error('[SSE] Erreur:', e);
-    updateSSEStatus(false);
+    const res = await apiFetch(`/api/events?last_id=${lastEventId}`);
+    if (!res) {
+      updateLiveStatus(false);
+      return;
+    }
+    const data = await res.json();
+    updateLiveStatus(true);
+    
+    if (data.success && data.events && data.events.length > 0) {
+      data.events.forEach(ev => {
+        // Mettre à jour lastEventId
+        if (ev.id > lastEventId) lastEventId = ev.id;
+        
+        // Traiter l'événement
+        processEvent(ev.event, ev.data);
+      });
+    }
+  } catch (e) {
+    console.error('[LiveFeed] Erreur:', e);
+    updateLiveStatus(false);
   }
 }
 
-function updateSSEStatus(connected) {
+function processEvent(eventName, data) {
+  if (eventName === 'presence_marked') {
+    addFeedItem('presence', '✅',
+      `${escHtml(data.etudiant_nom)} — présence enregistrée`,
+      `${escHtml(data.matricule)} · Session #${data.session_id}`,
+      data.timestamp || new Date().toLocaleTimeString('fr-FR')
+    );
+    loadStats();
+    showToast('success', `✅ Présence : ${data.etudiant_nom}`);
+  } 
+  else if (eventName === 'fraud_detected') {
+    addFeedItem('fraud', '🚨',
+      `Fraude détectée : ${escHtml(data.type_fraude)}`,
+      `${escHtml(data.description)} · IP: ${escHtml(data.ip)}`,
+      new Date().toLocaleTimeString('fr-FR')
+    );
+    loadStats();
+    showToast('error', `🚨 Fraude : ${data.type_fraude}`, 6000);
+  }
+  else if (eventName === 'qr_refresh') {
+    addFeedItem('qr', '🔄',
+      `QR Code renouvelé — Session #${data.session_id}`,
+      `Nouveau token actif · Expire dans ${data.expires_in}s`,
+      new Date().toLocaleTimeString('fr-FR')
+    );
+  }
+}
+
+function updateLiveStatus(connected) {
   const el = document.getElementById('sse-status');
   if (!el) return;
   if (connected) {
     el.innerHTML = `<div class="live-dot"></div> <span style="color:var(--color-accent);font-size:0.78rem;font-weight:600;">LIVE</span>`;
   } else {
-    el.innerHTML = `<div class="live-dot" style="background:var(--text-muted);animation:none;"></div> <span style="color:var(--text-muted);font-size:0.78rem;">Déconnecté</span>`;
+    el.innerHTML = `<div class="live-dot" style="background:var(--text-muted);animation:none;"></div> <span style="color:var(--text-muted);font-size:0.78rem;">Reconnexion...</span>`;
   }
 }
 

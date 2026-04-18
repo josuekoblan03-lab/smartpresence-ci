@@ -680,34 +680,33 @@ HttpResponse report_session(const HttpRequest& req, Database& db) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// GET /api/sse/events — Flux SSE
+// GET /api/events — Events polling (remplace SSE sur Railway)
 // ──────────────────────────────────────────────────────────────
-HttpResponse sse_stream(const HttpRequest& req, int client_fd) {
-    // Préparer le writer SSE
-    SSEWriter writer = [client_fd](const std::string& data) -> bool {
-        int sent = SEND_DATA(client_fd, data.c_str(), (int)data.size());
-        return sent > 0;
-    };
+HttpResponse get_events_poll(const HttpRequest& req, Database& db) {
+    int last_id = 0;
+    auto it = req.query.find("last_id");
+    if (it != req.query.end() && !it->second.empty()) {
+        try {
+            last_id = std::stoi(it->second);
+        } catch(...) {}
+    }
 
-    // Enregistrer le client
-    SSEManager::instance().add_client(client_fd, writer);
+    auto events = SSEManager::instance().get_recent_events(last_id);
 
-    // Démarrer le heartbeat en thread séparé
-    std::thread([client_fd]() {
-        while (true) {
-            std::this_thread::sleep_for(std::chrono::seconds(15));
-            std::string hb = "event: heartbeat\ndata: " + sse_events::heartbeat() + "\n\n";
-            int sent = SEND_DATA(client_fd, hb.c_str(), (int)hb.size());
-            if (sent <= 0) {
-                SSEManager::instance().remove_client(client_fd);
-                CLOSE_FD(client_fd);
-                break;
-            }
-        }
-    }).detach();
+    std::ostringstream json;
+    json << "{\"success\":true,\"events\":[";
+    for (size_t i = 0; i < events.size(); i++) {
+        if (i > 0) json << ",";
+        json << "{"
+             << "\"id\":" << events[i].id << ","
+             << "\"event\":\"" << utils::trim(events[i].event) << "\","
+             // data contient déjà du JSON, on l'incorpore tel quel
+             << "\"data\":" << events[i].data 
+             << "}";
+    }
+    json << "]}";
 
-    // Retourner la réponse SSE (les headers seront envoyés par le serveur)
-    return HttpResponse::sse_start();
+    return HttpResponse::ok(json.str());
 }
 
 } // namespace handlers

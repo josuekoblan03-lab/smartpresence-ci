@@ -12,6 +12,7 @@
 // Événement SSE
 // ─────────────────────────────────────────
 struct SSEEvent {
+    int id;             // Identifiant auto-incrémenté
     std::string event;  // nom de l'événement (ex: "presence_marked")
     std::string data;   // payload JSON
 };
@@ -47,9 +48,14 @@ public:
     // Nombre de clients connectés
     int client_count();
 
+    // Récupérer les événements depuis un ID donné (pour le polling)
+    std::vector<SSEEvent> get_recent_events(int since_id);
+
 private:
     SSEManager() = default;
     std::vector<SSEClient> clients_;
+    std::vector<SSEEvent>  recent_events_;
+    int                    next_event_id_ = 1;
     std::mutex             mutex_;
 
     // Formater un message SSE
