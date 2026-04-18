@@ -313,7 +313,7 @@ HttpResponse get_public_session_info(const HttpRequest& req, Database& db) {
     if (sid <= 0) return HttpResponse::error(400, "ID invalide");
 
     SessionCours s = db.find_session_by_id(sid);
-    if (s.id == 0 || !s.actif) return HttpResponse::error(404, "Session introuvable");
+    if (s.id == 0 || s.statut != "ouverte") return HttpResponse::error(404, "Session introuvable");
 
     std::string json = "{\"success\":true,\"session\":{\"titre\":\"" + s.titre + "\",\"date_creation\":\"" + utils::format_datetime(s.date_debut) + "\"}}";
     return HttpResponse::ok(json);
