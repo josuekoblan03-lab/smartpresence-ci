@@ -1,0 +1,282 @@
+/* ============================================================
+   scan.css — Styles spécifiques page scan mobile (375px)
+   SMARTPRESENCE CI
+   ============================================================ */
+
+/* ─── Page Scan ─────────────────────────────────────────── */
+.scan-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-base);
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Header compact */
+.scan-header {
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.scan-header-logo {
+  width: 32px;
+  height: 32px;
+  background: var(--gradient-primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.scan-header-title {
+  font-family: var(--font-head);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Contenu scan */
+.scan-content {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px 20px;
+  flex: 1;
+}
+
+/* Bandeau session */
+.session-banner {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 24px;
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.session-banner-title {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.session-banner-name {
+  font-family: var(--font-head);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.session-banner-info {
+  font-size: 0.8rem;
+  color: var(--color-primary-light);
+  margin-top: 4px;
+}
+
+/* Zone QR Reader */
+.qr-reader-zone {
+  background: var(--bg-card);
+  border: 2px dashed var(--border-hover);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.qr-reader-zone:hover {
+  border-color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.qr-reader-zone.scanning {
+  border-color: var(--color-accent);
+  animation: glow 2s ease-in-out infinite;
+}
+
+.qr-icon-large {
+  font-size: 4rem;
+  margin-bottom: 12px;
+  display: block;
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.qr-reader-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.qr-reader-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Séparateur */
+.scan-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.scan-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.scan-divider-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Formulaire manuel */
+.scan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scan-form-title {
+  font-family: var(--font-head);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+/* Input avec icône */
+.input-with-icon {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.input-with-icon .form-input {
+  padding-left: 42px;
+  font-size: 1rem;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  border-radius: var(--radius-lg);
+}
+
+/* Code PIN large */
+.pin-input {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 6px;
+  padding: 16px !important;
+}
+
+/* Bouton submit grand (mobile-friendly) */
+.btn-scan-submit {
+  padding: 18px 24px !important;
+  font-size: 1.1rem !important;
+  border-radius: var(--radius-xl) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px;
+}
+
+/* Résultat de la présence */
+.scan-result {
+  border-radius: var(--radius-xl);
+  padding: 28px 24px;
+  text-align: center;
+  animation: fadeIn 0.4s var(--ease-spring) both;
+}
+
+.scan-result.success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.scan-result.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.scan-result-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.scan-result-title {
+  font-family: var(--font-head);
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.scan-result.success .scan-result-title { color: #34d399; }
+.scan-result.error   .scan-result-title { color: #f87171; }
+
+.scan-result-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Token QR affiché */
+.token-display {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--color-primary-light);
+  word-break: break-all;
+  margin-top: 8px;
+}
+
+/* Status bar temps réel */
+.scan-status-bar {
+  width: 100%;
+  padding: 10px 20px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Responsive tablette et desktop pour scan */
+@media (min-width: 600px) {
+  .scan-content {
+    padding: 32px 24px;
+  }
+  .scan-form-title { font-size: 1.1rem; }
+}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Étudiants — SMARTPRESENCE CI</title>
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon" style="background:#fff;overflow:hidden;padding:3px;">
+        <img src="/assets/img/logo-iua.jpg" alt="IUA" style="width:100%;height:100%;object-fit:contain;border-radius:6px;">
+      </div>
+      <div class="sidebar-logo-text">
+        <div class="app-name">SMARTPRESENCE</div>
+        <div class="app-subtitle">IUA · Côte d'Ivoire</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a href="/dashboard.html" class="nav-item"><span class="nav-item-icon">📊</span> Tableau de bord</a>
+      <a href="/session.html"   class="nav-item"><span class="nav-item-icon">📅</span> Sessions</a>
+      <a href="/students.html"  class="nav-item active"><span class="nav-item-icon">👥</span> Étudiants</a>
+      <a href="/reports.html"   class="nav-item"><span class="nav-item-icon">📈</span> Rapports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-details">
+          <div class="user-name" id="user-display-name">...</div>
+          <div class="user-role" id="user-display-role">—</div>
+        </div>
+        <button onclick="logout()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;">🚪</button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <header class="app-header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+      <div class="header-title">👥 Étudiants inscrits</div>
+    </div>
+    <div class="header-right">
+      <span id="student-count" class="badge badge-info">0 étudiants</span>
+      <button class="btn btn-primary btn-sm admin-only" onclick="openAddModal()">➕ Ajouter</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Filtres -->
+    <div class="card mb-6">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="form-group" style="margin:0;flex:1;min-width:180px;">
+          <label class="form-label">🔍 Recherche</label>
+          <input type="text" id="search-input" class="form-input"
+            placeholder="Nom, prénom ou matricule..."
+            oninput="filterStudents()">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">🎓 Filière</label>
+          <select id="filter-filiere" class="form-input" style="width:auto;" onchange="filterStudents()">
+            <option value="">Toutes les filières</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadStudents()">↺ Rafraîchir</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Matricule</th>
+              <th>Nom & Prénom</th>
+              <th>Filière</th>
+              <th>Code personnel</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="students-tbody">
+            <tr>
+              <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">
+                <div class="spinner" style="margin:0 auto 12px;"></div> Chargement...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Ajout Étudiant (admin only) -->
+<div class="modal-overlay hidden" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">➕ Ajouter un étudiant</div>
+    <form id="add-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Nom *</label>
+          <input type="text" id="new-nom" class="form-input" placeholder="KONAN" required style="text-transform:uppercase;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prénom *</label>
+          <input type="text" id="new-prenom" class="form-input" placeholder="Ange" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Matricule *</label>
+        <input type="text" id="new-matricule" class="form-input" placeholder="IUA2024000001" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="new-email" class="form-input" placeholder="etudiant@iua.ci">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Filière</label>
+        <select id="new-filiere-student" class="form-input">
+          <option value="">-- Choisir --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Code personnel (6 chiffres, auto-généré si vide)</label>
+        <input type="text" id="new-code" class="form-input" placeholder="123456" maxlength="6" pattern="[0-9]{6}" inputmode="numeric">
+      </div>
+      <div id="add-error" class="alert alert-error hidden"><span>⚠️</span><span id="add-error-text"></span></div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-full" onclick="closeAddModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-full">Créer l'étudiant</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/assets/js/app.js"></script>
+<script>
+let allStudents = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  fillUserInfo(user);
+  await loadFilieres();
+  await loadStudents();
+  document.getElementById('add-form').addEventListener('submit', addStudent);
+});
+
+async function loadStudents() {
+  try {
+    const res  = await apiFetch('/api/students');
+    const data = await res.json();
+    allStudents = data.students || [];
+
+    document.getElementById('student-count').textContent = data.total + ' étudiant(s)';
+    renderStudents(allStudents);
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function loadFilieres() {
+  const res  = await fetch('/api/filieres');
+  const data = await res.json();
+  const sel1 = document.getElementById('filter-filiere');
+  const sel2 = document.getElementById('new-filiere-student');
+  data.filieres.forEach(f => {
+    [sel1, sel2].forEach(sel => {
+      if (!sel) return;
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      opt.textContent = f.nom;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+function renderStudents(students) {
+  const tbody = document.getElementById('students-tbody');
+  if (!students.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">Aucun étudiant trouvé</td></tr>';
+    return;
+  }
+  tbody.innerHTML = students.map((e, i) => `
+    <tr>
+      <td style="color:var(--text-muted);font-size:0.82rem;">${i+1}</td>
+      <td><span class="badge badge-info" style="font-family:var(--font-mono);">${escHtml(e.matricule)}</span></td>
+      <td>
+        <div style="font-weight:600;color:var(--text-primary);">${escHtml(e.nom)} ${escHtml(e.prenom)}</div>
+        ${e.email ? `<div style="font-size:0.78rem;color:var(--text-muted);">${escHtml(e.email)}</div>` : ''}
+      </td>
+      <td style="color:var(--text-secondary);">${escHtml(e.filiere_nom) || '—'}</td>
+      <td>
+        <span class="badge badge-warning" style="font-family:var(--font-mono);letter-spacing:3px;">
+          ••••••
+        </span>
+      </td>
+      <td>
+        <a href="/scan.html?matricule=${encodeURIComponent(e.matricule)}" class="btn btn-ghost btn-sm" target="_blank">📱 Scan</a>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterStudents() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filiereId = parseInt(document.getElementById('filter-filiere').value) || 0;
+
+  let filtered = allStudents;
+  if (q) {
+    filtered = filtered.filter(e =>
+      e.nom.toLowerCase().includes(q) ||
+      e.prenom.toLowerCase().includes(q) ||
+      e.matricule.toLowerCase().includes(q)
+    );
+  }
+  if (filiereId) {
+    filtered = filtered.filter(e => e.filiere_id === filiereId);
+  }
+  renderStudents(filtered);
+}
+
+function openAddModal() { document.getElementById('add-modal').classList.remove('hidden'); }
+function closeAddModal() { document.getElementById('add-modal').classList.add('hidden'); }
+
+async function addStudent(e) {
+  e.preventDefault();
+  const body = {
+    nom:            document.getElementById('new-nom').value.trim().toUpperCase(),
+    prenom:         document.getElementById('new-prenom').value.trim(),
+    matricule:      document.getElementById('new-matricule').value.trim().toUpperCase(),
+    email:          document.getElementById('new-email').value.trim(),
+    filiere_id:     parseInt(document.getElementById('new-filiere-student').value) || 0,
+    code_personnel: document.getElementById('new-code').value.trim()
+  };
+
+  try {
+    const res  = await apiFetch('/api/students', { method: 'POST', body: JSON.stringify(body) });
+    const data = await res.json();
+
+    if (data.success) {
+      showToast('success', `✅ Étudiant créé · Code: ${data.code_personnel}`);
+      closeAddModal();
+      await loadStudents();
+    } else {
+      document.getElementById('add-error-text').textContent = data.error;
+      document.getElementById('add-error').classList.remove('hidden');
+    }
+  } catch(err) {
+    showToast('error', 'Erreur serveur');
+  }
+}
+</script>
+</body>
+</html>

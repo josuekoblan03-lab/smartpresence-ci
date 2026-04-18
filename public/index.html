@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMARTPRESENCE CI — Connexion</title>
+  <meta name="description" content="Système de gestion intelligente des présences universitaires — Institut Universitaire d'Abidjan">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <style>
+    /* Particules d'arrière-plan */
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: float linear infinite;
+    }
+    @keyframes float {
+      0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10%  { opacity: 0.4; }
+      90%  { opacity: 0.2; }
+      100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <!-- Décorations fond -->
+    <div class="auth-bg-decoration" id="bg1" style="width:500px;height:500px;background:radial-gradient(circle,#6366f1,transparent);top:-200px;left:-200px;"></div>
+    <div class="auth-bg-decoration" id="bg2" style="width:400px;height:400px;background:radial-gradient(circle,#8b5cf6,transparent);bottom:-100px;right:-100px;"></div>
+    <div class="auth-bg-decoration" id="bg3" style="width:300px;height:300px;background:radial-gradient(circle,#10b981,transparent);top:50%;left:60%;opacity:0.06;"></div>
+
+    <!-- Carte de connexion -->
+    <div class="auth-card">
+      <!-- Logo -->
+      <div style="text-align:center;margin-bottom:36px;">
+        <div style="width:72px;height:72px;background:#fff;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:var(--shadow-glow);overflow:hidden;padding:6px;">
+          <img src="/assets/img/logo-iua.jpg" alt="Logo IUA" style="width:100%;height:100%;object-fit:contain;">
+        </div>
+        <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:6px;">SMARTPRESENCE CI</h1>
+        <p style="font-size:0.85rem;color:var(--text-muted);">Institut Universitaire d'Abidjan</p>
+        <div style="width:40px;height:3px;background:var(--gradient-primary);margin:12px auto 0;border-radius:2px;"></div>
+      </div>
+
+      <!-- Titre -->
+      <h2 style="font-size:1.2rem;margin-bottom:6px;text-align:center;">Connexion</h2>
+      <p style="text-align:center;font-size:0.85rem;margin-bottom:28px;">Accédez à votre tableau de bord</p>
+
+      <!-- Alerte erreur -->
+      <div id="error-alert" class="alert alert-error hidden" style="margin-bottom:20px;">
+        <span>⚠️</span>
+        <span id="error-message">Identifiants incorrects</span>
+      </div>
+
+      <!-- Formulaire -->
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">📧 Adresse email</label>
+          <input
+            class="form-input"
+            type="email"
+            id="email"
+            name="email"
+            placeholder="votre@email.ci"
+            required
+            autocomplete="email"
+            value="admin@smartpresence-ci.com"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">🔒 Mot de passe</label>
+          <div style="position:relative;">
+            <input
+              class="form-input"
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              required
+              style="padding-right:48px;"
+              value="Admin2024!"
+            >
+            <button type="button" id="toggle-pwd" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;">👁</button>
+          </div>
+        </div>
+
+        <!-- Comptes de test -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="setAccount('admin@smartpresence-ci.com','Admin2024!')">
+            👑 Admin
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="setAccount('prof.kone@iua.ci','Prof2024!')">
+            👨‍🏫 Enseignant
+          </button>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-full btn-lg">
+          <span id="btn-text">Se connecter</span>
+          <div id="btn-spinner" class="spinner hidden" style="width:18px;height:18px;border-width:2px;"></div>
+        </button>
+      </form>
+
+      <!-- Footer -->
+      <p style="text-align:center;font-size:0.77rem;color:var(--text-muted);margin-top:24px;">
+        Système sécurisé · 6 boucliers anti-fraude actifs
+      </p>
+
+      <!-- Boucliers indicateurs -->
+      <div style="display:flex;justify-content:center;gap:6px;margin-top:12px;flex-wrap:wrap;">
+        <span class="badge badge-success" style="font-size:0.7rem;">🛡 Token QR</span>
+        <span class="badge badge-success" style="font-size:0.7rem;">🛡 Fenêtre temps</span>
+        <span class="badge badge-success" style="font-size:0.7rem;">🛡 Code PIN</span>
+        <span class="badge badge-success" style="font-size:0.7rem;">🛡 Anti-double</span>
+        <span class="badge badge-success" style="font-size:0.7rem;">🛡 Session</span>
+        <span class="badge badge-success" style="font-size:0.7rem;">🛡 Rate Limit</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script src="/assets/js/app.js"></script>
+  <script>
+    // Préremplir avec un compte de test
+    function setAccount(email, password) {
+      document.getElementById('email').value = email;
+      document.getElementById('password').value = password;
+    }
+
+    // Toggle mot de passe visible
+    document.getElementById('toggle-pwd').addEventListener('click', function() {
+      const input = document.getElementById('password');
+      input.type = input.type === 'password' ? 'text' : 'password';
+      this.textContent = input.type === 'password' ? '👁' : '🙈';
+    });
+
+    // Soumission du formulaire
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn      = document.getElementById('submit-btn');
+      const btnText  = document.getElementById('btn-text');
+      const spinner  = document.getElementById('btn-spinner');
+      const errAlert = document.getElementById('error-alert');
+      const errMsg   = document.getElementById('error-message');
+
+      // Afficher le spinner
+      btn.disabled = true;
+      btnText.textContent = 'Connexion...';
+      spinner.classList.remove('hidden');
+      errAlert.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+          credentials: 'include'
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          // Stocker les infos utilisateur
+          localStorage.setItem('sp_user', JSON.stringify(data.user));
+          localStorage.setItem('sp_token', data.token);
+          showToast('success', '✅ Connexion réussie ! Redirection...');
+          setTimeout(() => { window.location.href = '/dashboard.html'; }, 800);
+        } else {
+          errMsg.textContent = data.error || 'Identifiants incorrects';
+          errAlert.classList.remove('hidden');
+          btn.disabled = false;
+          btnText.textContent = 'Se connecter';
+          spinner.classList.add('hidden');
+        }
+      } catch (err) {
+        errMsg.textContent = 'Erreur de connexion au serveur. Réessayez.';
+        errAlert.classList.remove('hidden');
+        btn.disabled = false;
+        btnText.textContent = 'Se connecter';
+        spinner.classList.add('hidden');
+      }
+    });
+
+    // Vérifier si déjà connecté
+    (async function() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) window.location.href = '/dashboard.html';
+        }
+      } catch(e) {}
+    })();
+  </script>
+</body>
+</html>

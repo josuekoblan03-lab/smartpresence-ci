@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sessions — SMARTPRESENCE CI</title>
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <!-- QRCode.js pour afficher les QR Codes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon" style="background:#fff;overflow:hidden;padding:3px;">
+        <img src="/assets/img/logo-iua.jpg" alt="IUA" style="width:100%;height:100%;object-fit:contain;border-radius:6px;">
+      </div>
+      <div class="sidebar-logo-text">
+        <div class="app-name">SMARTPRESENCE</div>
+        <div class="app-subtitle">IUA · Côte d'Ivoire</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a href="/dashboard.html" class="nav-item"><span class="nav-item-icon">📊</span> Tableau de bord</a>
+      <a href="/session.html"   class="nav-item active"><span class="nav-item-icon">📅</span> Sessions</a>
+      <a href="/students.html"  class="nav-item"><span class="nav-item-icon">👥</span> Étudiants</a>
+      <a href="/reports.html"   class="nav-item"><span class="nav-item-icon">📈</span> Rapports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-details">
+          <div class="user-name" id="user-display-name">...</div>
+          <div class="user-role" id="user-display-role">—</div>
+        </div>
+        <button onclick="logout()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;">🚪</button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+      <div class="header-title">📅 Sessions de cours</div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-primary" onclick="openCreateModal()">➕ Nouvelle session</button>
+    </div>
+  </header>
+
+  <!-- CONTENU -->
+  <main class="main-content">
+
+    <!-- Grille : liste + QR actif -->
+    <div class="grid-2" style="gap:24px;align-items:start;">
+
+      <!-- Liste des sessions -->
+      <div>
+        <div class="section-header mb-6">
+          <div class="section-title">📋 Mes sessions</div>
+          <div style="display:flex;gap:8px;">
+            <select id="filter-statut" class="form-input" style="width:auto;padding:8px 14px;font-size:0.85rem;" onchange="loadSessions()">
+              <option value="">Toutes</option>
+              <option value="ouverte">Ouvertes</option>
+              <option value="fermee">Fermées</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="sessions-container">
+          <div style="text-align:center;padding:40px;color:var(--text-muted);">
+            <div class="spinner" style="margin:0 auto 16px;"></div>
+            Chargement...
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code actif -->
+      <div class="card" id="qr-panel" style="display:none;position:sticky;top:80px;">
+        <div class="section-header mb-6">
+          <div class="section-title">🔲 QR Code actif</div>
+          <div class="live-indicator">
+            <div class="live-dot"></div> LIVE
+          </div>
+        </div>
+
+        <div id="qr-session-info" class="session-banner" style="background:rgba(99,102,241,0.08);border-color:rgba(99,102,241,0.2);margin-bottom:20px;">
+          <div class="session-banner-name" id="qr-session-title">—</div>
+          <div class="session-banner-info" id="qr-session-details">—</div>
+        </div>
+
+        <!-- QR Code -->
+        <div style="text-align:center;">
+          <div style="background:white;padding:16px;border-radius:16px;display:inline-block;box-shadow:0 0 30px rgba(99,102,241,0.2);">
+            <div id="qr-canvas"></div>
+          </div>
+
+          <!-- Countdown -->
+          <div style="margin-top:16px;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:0.8rem;color:var(--text-muted);">Renouvellement dans</span>
+              <span id="qr-countdown" style="font-family:var(--font-mono);font-weight:700;color:var(--color-primary-light);">30s</span>
+            </div>
+            <div class="qr-countdown">
+              <div class="qr-countdown-bar" id="qr-countdown-bar"></div>
+            </div>
+          </div>
+
+          <!-- Token brut -->
+          <div class="token-display" id="qr-token-text" style="margin-top:12px;font-size:0.72rem;"></div>
+
+          <!-- Actions -->
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:center;">
+            <a id="scan-page-link" href="#" class="btn btn-accent btn-sm" target="_blank">📱 Page Scan</a>
+            <button id="close-session-btn" class="btn btn-danger btn-sm" onclick="closeCurrentSession()">🔒 Fermer session</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Création Session -->
+<div class="modal-overlay hidden" id="create-modal">
+  <div class="modal">
+    <div class="modal-title">➕ Nouvelle session de cours</div>
+
+    <div id="modal-error" class="alert alert-error hidden" style="margin-bottom:16px;">
+      <span>⚠️</span><span id="modal-error-text">Erreur</span>
+    </div>
+
+    <form id="create-form">
+      <div class="form-group">
+        <label class="form-label">📚 Intitulé de la session *</label>
+        <input type="text" id="new-titre" class="form-input" placeholder="Ex: Algorithmique avancée - CM1" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">📖 Matière *</label>
+        <input type="text" id="new-matiere" class="form-input" placeholder="Ex: Informatique" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">🎓 Filière</label>
+        <select id="new-filiere" class="form-input">
+          <option value="">-- Choisir une filière --</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-full" onclick="closeCreateModal()">Annuler</button>
+        <button type="submit" id="create-btn" class="btn btn-primary btn-full">
+          <span id="create-btn-text">Créer et ouvrir</span>
+          <div id="create-spinner" class="spinner hidden" style="width:16px;height:16px;margin-left:8px;"></div>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="/assets/js/app.js"></script>
+<script src="/assets/js/session.js"></script>
+</body>
+</html>

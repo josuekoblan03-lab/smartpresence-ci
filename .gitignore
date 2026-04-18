@@ -1,0 +1,25 @@
+# SMARTPRESENCE CI — Fichiers ignorés par Git
+*.exe
+*.obj
+*.o
+*.pdb
+*.dll
+
+# Base de données générée automatiquement
+*.db
+*.db-wal
+*.db-shm
+
+# Fichiers de logs
+out.txt
+err.txt
+
+# Fichiers de test temporaires
+test_db.cpp
+test_hash.cpp
+test_db.exe
+test_hash.exe
+
+# Environnement local
+.env
+.env.local

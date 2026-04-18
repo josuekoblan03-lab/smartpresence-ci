@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapports — SMARTPRESENCE CI</title>
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon" style="background:#fff;overflow:hidden;padding:3px;">
+        <img src="/assets/img/logo-iua.jpg" alt="IUA" style="width:100%;height:100%;object-fit:contain;border-radius:6px;">
+      </div>
+      <div class="sidebar-logo-text">
+        <div class="app-name">SMARTPRESENCE</div>
+        <div class="app-subtitle">IUA · Côte d'Ivoire</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a href="/dashboard.html" class="nav-item"><span class="nav-item-icon">📊</span> Tableau de bord</a>
+      <a href="/session.html"   class="nav-item"><span class="nav-item-icon">📅</span> Sessions</a>
+      <a href="/students.html"  class="nav-item"><span class="nav-item-icon">👥</span> Étudiants</a>
+      <a href="/reports.html"   class="nav-item active"><span class="nav-item-icon">📈</span> Rapports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-details">
+          <div class="user-name" id="user-display-name">...</div>
+          <div class="user-role" id="user-display-role">—</div>
+        </div>
+        <button onclick="logout()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;">🚪</button>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <header class="app-header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+      <div class="header-title">📈 Rapports de présence</div>
+    </div>
+    <div class="header-right">
+      <button id="export-btn" class="btn btn-outline btn-sm" onclick="exportRapport()" style="display:none;">
+        ⬇️ Exporter CSV
+      </button>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Sélection session -->
+    <div class="card mb-6">
+      <h3 style="margin-bottom:16px;">🔍 Choisir une session</h3>
+      <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="margin:0;flex:1;min-width:200px;">
+          <label class="form-label">Session de cours</label>
+          <select id="session-select" class="form-input" onchange="loadReport()">
+            <option value="">-- Choisissez une session --</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="loadReport()">📊 Générer le rapport</button>
+      </div>
+    </div>
+
+    <!-- Résumé rapport -->
+    <div id="report-summary" class="stats-grid hidden" style="margin-bottom:24px;">
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-green">✅</div>
+        <div class="stat-value" id="r-presents">—</div>
+        <div class="stat-label">Présents</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-red">❌</div>
+        <div class="stat-value" id="r-absents">—</div>
+        <div class="stat-label">Absents</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-blue">📊</div>
+        <div class="stat-value" id="r-taux">—%</div>
+        <div class="stat-label">Taux de présence</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-purple">🎓</div>
+        <div class="stat-value" id="r-total">—</div>
+        <div class="stat-label">Total filière</div>
+      </div>
+    </div>
+
+    <!-- Rapport titre -->
+    <div id="report-header" class="hidden mb-6">
+      <div class="card" style="background:var(--gradient-card);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div class="section-title" id="report-title">—</div>
+            <div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px;" id="report-details">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div id="report-taux-bar" style="width:120px;height:8px;background:var(--bg-elevated);border-radius:4px;overflow:hidden;">
+              <div id="report-taux-fill" style="height:100%;background:var(--gradient-accent);border-radius:4px;transition:width 0.8s var(--ease-spring);width:0%;"></div>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;" id="report-taux-label">Taux de présence</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table présences -->
+    <div id="report-table-container" class="card hidden">
+      <div class="section-header mb-6">
+        <div class="section-title">📋 Liste de présences</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);" id="report-count-label">—</div>
+      </div>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Matricule</th>
+              <th>Étudiant</th>
+              <th>Heure de pointage</th>
+              <th>IP Client</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="report-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script src="/assets/js/app.js"></script>
+<script>
+let currentReportData = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  fillUserInfo(user);
+  await loadSessions();
+
+  // Si session passée en URL
+  const params = new URLSearchParams(window.location.search);
+  const sid = params.get('session');
+  if (sid) {
+    document.getElementById('session-select').value = sid;
+    setTimeout(loadReport, 500);
+  }
+});
+
+async function loadSessions() {
+  const res  = await apiFetch('/api/sessions');
+  const data = await res.json();
+  const sel  = document.getElementById('session-select');
+
+  (data.sessions || []).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `#${s.id} · ${s.titre} (${s.statut==='ouverte'?'🟢':'🔴'} ${s.statut}) · ${s.presences_count} présences`;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadReport() {
+  const sid = parseInt(document.getElementById('session-select').value);
+  if (!sid) return;
+
+  // Afficher loading
+  document.getElementById('report-tbody').innerHTML =
+    '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);"><div class="spinner" style="margin:0 auto 12px;"></div>Génération...</td></tr>';
+
+  try {
+    const res  = await apiFetch(`/api/reports/session/${sid}`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    currentReportData = data;
+
+    // Résumé stats
+    const absents = data.total_etudiants_filiere - data.total_presents;
+    document.getElementById('r-presents').textContent = data.total_presents;
+    document.getElementById('r-absents').textContent  = Math.max(0, absents);
+    document.getElementById('r-taux').textContent     = data.taux_presence + '%';
+    document.getElementById('r-total').textContent    = data.total_etudiants_filiere;
+
+    document.getElementById('report-summary').classList.remove('hidden');
+
+    // En-tête rapport
+    const s = data.session;
+    document.getElementById('report-title').textContent  = s.titre;
+    document.getElementById('report-details').textContent =
+      `${s.filiere_nom} · ${s.enseignant_nom} · ${formatDate(s.date_debut)}`;
+    document.getElementById('report-taux-fill').style.width = data.taux_presence + '%';
+    document.getElementById('report-taux-label').textContent = `Taux : ${data.taux_presence}%`;
+    document.getElementById('report-header').classList.remove('hidden');
+
+    // Tableau
+    document.getElementById('report-count-label').textContent =
+      `${data.total_presents} présent(s) sur ${data.total_etudiants_filiere} inscrit(s)`;
+
+    const tbody = document.getElementById('report-tbody');
+    if (!data.presences.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">Aucune présence enregistrée pour cette session</td></tr>';
+    } else {
+      tbody.innerHTML = data.presences.map((p, i) => `
+        <tr>
+          <td style="color:var(--text-muted);">${i+1}</td>
+          <td><span class="badge badge-info" style="font-family:var(--font-mono);">${escHtml(p.matricule)}</span></td>
+          <td style="font-weight:600;color:var(--text-primary);">${escHtml(p.etudiant_nom)}</td>
+          <td style="color:var(--text-secondary);">🕐 ${escHtml(p.horodatage)}</td>
+          <td style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">${escHtml(p.ip_client)}</td>
+          <td><span class="badge badge-success">✅ Validé</span></td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('report-table-container').classList.remove('hidden');
+    document.getElementById('export-btn').style.display = '';
+    showToast('success', `📊 Rapport généré : ${data.total_presents} présent(s)`);
+
+  } catch(e) {
+    console.error(e);
+    showToast('error', 'Erreur lors de la génération du rapport');
+  }
+}
+
+// Export CSV
+function exportRapport() {
+  if (!currentReportData) return;
+  const d = currentReportData;
+
+  let csv = `"Titre",${JSON.stringify(d.session.titre)}\n`;
+  csv += `"Filière",${JSON.stringify(d.session.filiere_nom)}\n`;
+  csv += `"Enseignant",${JSON.stringify(d.session.enseignant_nom)}\n`;
+  csv += `"Date",${JSON.stringify(formatDate(d.session.date_debut))}\n`;
+  csv += `"Présents",${d.total_presents}\n`;
+  csv += `"Total filière",${d.total_etudiants_filiere}\n`;
+  csv += `"Taux",${d.taux_presence}%\n\n`;
+  csv += '"#","Matricule","Étudiant","Heure"\n';
+
+  d.presences.forEach((p, i) => {
+    csv += `${i+1},"${p.matricule}","${p.etudiant_nom}","${p.horodatage}"\n`;
+  });
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href  = url;
+  link.download = `rapport_session_${d.session.id}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('success', '⬇️ Export CSV en cours...');
+}
+</script>
+</body>
+</html>

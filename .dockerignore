@@ -1,0 +1,36 @@
+# ============================================================
+# .dockerignore — Exclusions pour le build Docker
+# ============================================================
+
+# Fichiers Windows
+*.exe
+*.obj
+*.pdb
+*.ilk
+
+# Fichiers de compilation temporaires
+*.o
+sqlite3.o
+test_db.exe
+test_hash.exe
+test_db.cpp
+test_hash.cpp
+
+# Base de données locale
+*.db
+*.db-wal
+*.db-shm
+
+# Logs locaux
+out.txt
+err.txt
+
+# Git
+.git
+.gitignore
+
+# Environnement local
+.env.local
+
+# MinGW / MSYS2
+*.dll

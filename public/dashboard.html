@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — SMARTPRESENCE CI</title>
+  <meta name="description" content="Tableau de bord de gestion de présences universitaires">
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- ══════════════════ SIDEBAR ══════════════════ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon" style="background:#fff;overflow:hidden;padding:3px;">
+          <img src="/assets/img/logo-iua.jpg" alt="IUA" style="width:100%;height:100%;object-fit:contain;border-radius:6px;">
+        </div>
+        <div class="sidebar-logo-text">
+          <div class="app-name">SMARTPRESENCE</div>
+          <div class="app-subtitle">IUA · Côte d'Ivoire</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Principal</div>
+        <a href="/dashboard.html" class="nav-item active" id="nav-dashboard">
+          <span class="nav-item-icon">📊</span> Tableau de bord
+        </a>
+        <a href="/session.html" class="nav-item" id="nav-session">
+          <span class="nav-item-icon">📅</span> Sessions de cours
+        </a>
+        <a href="/students.html" class="nav-item" id="nav-students">
+          <span class="nav-item-icon">👥</span> Étudiants
+        </a>
+        <a href="/reports.html" class="nav-item" id="nav-reports">
+          <span class="nav-item-icon">📈</span> Rapports
+        </a>
+
+        <div class="nav-section-title">Sécurité</div>
+        <a href="#" class="nav-item" id="nav-frauds" onclick="showFraudsPanel();return false;">
+          <span class="nav-item-icon">🛡️</span> Alertes Fraude
+          <span class="nav-badge" id="fraud-count">0</span>
+        </a>
+
+        <div class="nav-section-title admin-only">Administration</div>
+        <a href="/students.html" class="nav-item admin-only">
+          <span class="nav-item-icon">⚙️</span> Gérer les étudiants
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-details">
+            <div class="user-name" id="user-display-name">Chargement...</div>
+            <div class="user-role" id="user-display-role">—</div>
+          </div>
+          <button onclick="logout()" title="Déconnexion"
+            style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:4px;">
+            🚪
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Overlay mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- ══════════════════ HEADER ══════════════════ -->
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+        <div class="header-title">Tableau de bord</div>
+      </div>
+      <div class="header-right">
+        <!-- Indicateur SSE -->
+        <div class="live-indicator" id="sse-status">
+          <div class="live-dot" style="background:var(--text-muted);"></div>
+          <span style="color:var(--text-muted);">Connexion...</span>
+        </div>
+        <a href="/session.html" class="btn btn-primary btn-sm">
+          ➕ Nouvelle session
+        </a>
+      </div>
+    </header>
+
+    <!-- ══════════════════ CONTENU ══════════════════ -->
+    <main class="main-content">
+
+      <!-- Titre page -->
+      <div class="section-header mb-6">
+        <div>
+          <h1 style="font-size:1.5rem;margin-bottom:4px;">Bienvenue, <span id="welcome-name">...</span> 👋</h1>
+          <p style="font-size:0.85rem;" id="welcome-subtitle">Institut Universitaire d'Abidjan</p>
+        </div>
+        <div style="font-size:0.82rem;color:var(--text-muted);" id="current-time"></div>
+      </div>
+
+      <!-- ── Stats Grid ── -->
+      <div class="stats-grid" id="stats-grid">
+        <!-- Chargement -->
+        <div class="stat-card animate-fadeIn" style="animation-delay:0.05s;">
+          <div class="stat-icon stat-icon-blue">👥</div>
+          <div class="stat-value" id="stat-etudiants">—</div>
+          <div class="stat-label">Étudiants inscrits</div>
+        </div>
+        <div class="stat-card animate-fadeIn" style="animation-delay:0.1s;">
+          <div class="stat-icon stat-icon-green">✅</div>
+          <div class="stat-value" id="stat-presences">—</div>
+          <div class="stat-label">Présences aujourd'hui</div>
+          <div class="stat-trend up" id="stat-trend-presence"></div>
+        </div>
+        <div class="stat-card animate-fadeIn" style="animation-delay:0.15s;">
+          <div class="stat-icon stat-icon-orange">📅</div>
+          <div class="stat-value" id="stat-sessions">—</div>
+          <div class="stat-label">Sessions totales</div>
+          <div class="stat-trend" id="stat-sessions-open" style="color:var(--color-accent);"></div>
+        </div>
+        <div class="stat-card animate-fadeIn" style="animation-delay:0.2s;">
+          <div class="stat-icon stat-icon-red">🚨</div>
+          <div class="stat-value" id="stat-fraudes">—</div>
+          <div class="stat-label">Tentatives de fraude</div>
+        </div>
+        <div class="stat-card animate-fadeIn" style="animation-delay:0.25s;">
+          <div class="stat-icon stat-icon-purple">📊</div>
+          <div class="stat-value" id="stat-taux">—%</div>
+          <div class="stat-label">Taux de présence moyen</div>
+        </div>
+        <div class="stat-card animate-fadeIn" style="animation-delay:0.3s;">
+          <div class="stat-icon stat-icon-blue">🛡️</div>
+          <div class="stat-value" style="font-size:1.5rem;">6 / 6</div>
+          <div class="stat-label">Boucliers actifs</div>
+          <div class="stat-trend up">✓ Tous opérationnels</div>
+        </div>
+      </div>
+
+      <!-- ── Grid 2 colonnes ── -->
+      <div class="grid-2" style="gap:24px;">
+
+        <!-- Live Feed SSE -->
+        <div class="card animate-fadeIn" style="animation-delay:0.35s;">
+          <div class="section-header">
+            <div class="section-title">
+              📡 Flux Temps Réel
+              <div class="live-indicator" id="feed-live-indicator">
+                <div class="live-dot"></div> LIVE
+              </div>
+            </div>
+            <button onclick="clearFeed()" class="btn btn-ghost btn-sm">Vider</button>
+          </div>
+
+          <div class="live-feed" id="live-feed">
+            <div style="text-align:center;padding:40px 0;color:var(--text-muted);">
+              <div style="font-size:2rem;margin-bottom:12px;">📡</div>
+              <p>En attente d'événements...</p>
+              <p style="font-size:0.8rem;margin-top:4px;">Les présences et alertes s'afficheront ici.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sessions récentes -->
+        <div class="card animate-fadeIn" style="animation-delay:0.4s;">
+          <div class="section-header">
+            <div class="section-title">📅 Sessions Récentes</div>
+            <a href="/session.html" class="btn btn-ghost btn-sm">Voir tout →</a>
+          </div>
+
+          <div id="sessions-list">
+            <div style="text-align:center;padding:40px 0;color:var(--text-muted);">
+              <div class="spinner" style="margin:0 auto 12px;"></div>
+              <p>Chargement...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Alertes Fraude Panel ── -->
+      <div id="frauds-panel" class="card mt-6 hidden animate-fadeIn">
+        <div class="section-header">
+          <div class="section-title">🚨 Tentatives de Fraude Détectées</div>
+          <button onclick="closeFraudsPanel()" class="btn btn-ghost btn-sm">✕ Fermer</button>
+        </div>
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Horodatage</th>
+                <th>Étudiant</th>
+                <th>Type de fraude</th>
+                <th>Description</th>
+                <th>IP Client</th>
+              </tr>
+            </thead>
+            <tbody id="frauds-body">
+              <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script src="/assets/js/app.js"></script>
+  <script src="/assets/js/dashboard.js"></script>
+</body>
+</html>
