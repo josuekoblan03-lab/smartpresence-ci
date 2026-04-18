@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // shields.h — 6 Boucliers Anti-Fraude SMARTPRESENCE CI
 // ============================================================
 #pragma once
@@ -30,6 +30,7 @@ struct PresenceAttempt {
     double      gps_end_lat   = 0.0;
     double      gps_end_lng   = 0.0;
     std::string face_descriptor;
+    std::string base64_image;
 };
 
 namespace shields {

@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────────────
 // Variables Globales
 // ─────────────────────────────────────────────────────────────
 let currentAppareilId = null; 
@@ -250,9 +250,9 @@ async function submitPresence(e) {
     
     // VISAGE
     overlay.style.background = 'transparent'; 
-    let faceDescriptorArray;
+    let base64Image;
     try {
-      faceDescriptorArray = await startBiometricScan();
+      base64Image = await startBiometricScan();
     } catch(err) {
       throw new Error(err);
     }
@@ -281,7 +281,7 @@ async function submitPresence(e) {
       gps_start_lng: gps1.lng.toString(),
       gps_end_lat: gps2.lat.toString(),
       gps_end_lng: gps2.lng.toString(),
-      face_descriptor: JSON.stringify(faceDescriptorArray)
+      base64_image: base64Image
     };
 
     const response = await fetch('/api/presence/mark', {
@@ -512,12 +512,18 @@ async function startBiometricScan() {
             clearInterval(scanInterval);
             
             setTimeout(async () => {
-              const finalDet = await faceapi.detectSingleFace(video, options)
-                                         .withFaceLandmarks().withFaceDescriptor();
+              const finalDet = await faceapi.detectSingleFace(video, options).withFaceLandmarks();
               
+              // Capture photo (high res snapshot)
+              const captureCanvas = document.createElement('canvas');
+              captureCanvas.width = video.videoWidth;
+              captureCanvas.height = video.videoHeight;
+              captureCanvas.getContext('2d').drawImage(video, 0, 0);
+              const b64 = captureCanvas.toDataURL('image/jpeg', 0.90);
+
               stream.getTracks().forEach(t => t.stop());
-              if (!finalDet) reject("Échec d'extraction finale du visage. Re-essayez.");
-              else resolve(Array.from(finalDet.descriptor));
+              if (!finalDet) reject("Echec de la capture du visage. Re-essayez.");
+              else resolve(b64);
             }, 300);
         } else {
              if (!actionReussie) {

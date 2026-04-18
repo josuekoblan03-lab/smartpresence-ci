@@ -1,4 +1,4 @@
-// ============================================================
+ï»¿// ============================================================
 // utils.cpp â€” ImplÃ©mentation des fonctions hash mot de passe
 // ============================================================
 #include "utils.h"
@@ -47,13 +47,13 @@ bool verify_password(const std::string& password, const std::string& hash_stored
 
 namespace utils {
 
-// Convertir degrés en radians
+// Convertir degrï¿½s en radians
 static double to_rad(double degree) {
     return degree * 3.14159265358979323846 / 180.0;
 }
 
 double haversine_distance(double lat1, double lon1, double lat2, double lon2) {
-    const double R = 6371000.0; // Rayon de la Terre en mètres
+    const double R = 6371000.0; // Rayon de la Terre en mï¿½tres
     double dLat = to_rad(lat2 - lat1);
     double dLon = to_rad(lon2 - lon1);
     double a = std::sin(dLat / 2.0) * std::sin(dLat / 2.0) +
@@ -80,14 +80,19 @@ static std::vector<float> parse_descriptor(const std::string& desc) {
 double face_distance(const std::string& desc1, const std::string& desc2) {
     auto v1 = parse_descriptor(desc1);
     auto v2 = parse_descriptor(desc2);
-    if (v1.size() != 128 || v2.size() != 128) return 999.0;
+    if (v1.empty() || v2.empty() || v1.size() != v2.size()) return 999.0;
     
-    double sum = 0.0;
-    for (size_t i = 0; i < 128; i++) {
-        double diff = v1[i] - v2[i];
-        sum += diff * diff;
+    double dot = 0.0, norm1 = 0.0, norm2 = 0.0;
+    for (size_t i = 0; i < v1.size(); i++) {
+        dot += v1[i] * v2[i];
+        norm1 += v1[i] * v1[i];
+        norm2 += v2[i] * v2[i];
     }
-    return std::sqrt(sum);
+    
+    if (norm1 == 0.0 || norm2 == 0.0) return 999.0;
+    
+    double similarity = dot / (std::sqrt(norm1) * std::sqrt(norm2));
+    return 1.0 - similarity;
 }
 
 } // namespace utils

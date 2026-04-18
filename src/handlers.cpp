@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // handlers.cpp — Implémentation de tous les handlers API REST
 // SMARTPRESENCE CI
 // ============================================================
@@ -8,6 +8,28 @@
 #include "sse.h"
 #include "qrcode.h"
 #include "shields.h"
+#include "httplib.h"
+
+std::string get_embedding_from_python(const std::string& base64_image) {
+    if (base64_image.empty()) return "CNVS_ERR";
+    
+    httplib::Client cli("127.0.0.1", 5000);
+    cli.set_connection_timeout(5, 0);
+    cli.set_read_timeout(10, 0);
+    
+    crow::json::wvalue py_req;
+    py_req["base64_image"] = base64_image;
+    
+    if (auto res = cli.Post("/analyze", py_req.dump(), "application/json")) {
+        if (res->status == 200) {
+            auto data = crow::json::load(res->body);
+            if (data && data["success"].b()) {
+                return data["embedding"].dump();
+            }
+        }
+    }
+    return "CNVS_ERR";
+}
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -384,7 +406,8 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
     std::string gps_start_lng_str = utils::json_get_str(req.body, "gps_start_lng");
     std::string gps_end_lat_str   = utils::json_get_str(req.body, "gps_end_lat");
     std::string gps_end_lng_str   = utils::json_get_str(req.body, "gps_end_lng");
-    std::string face_descriptor   = utils::json_get_str(req.body, "face_descriptor");
+    std::string base64_image      = utils::json_get_str(req.body, "base64_image");
+    std::string face_descriptor   = get_embedding_from_python(base64_image);
 
     // Fallback form data
     if (matricule.empty()) {

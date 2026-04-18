@@ -250,7 +250,7 @@ ShieldResult check_facial_biometrics(const PresenceAttempt& attempt,
     for (const auto& p : presences) {
         if (p.etudiant_id != attempt.etudiant_id && !p.face_descriptor.empty()) {
             double dist = utils::face_distance(attempt.face_descriptor, p.face_descriptor);
-            if (dist < 0.5) { // Seuil usuel de face-api.js
+            if (dist < 0.55) { // Seuil usuel ArcFace (Cosinus > 0.45)
                 r.passed  = false;
                 r.message = "Fraude absolue: Ce visage a DÉJÀ été validé pour un autre étudiant lors de cette session !";
                 return r;
@@ -262,7 +262,7 @@ ShieldResult check_facial_biometrics(const PresenceAttempt& attempt,
     if (!etudiant.face_descriptor.empty() && etudiant.face_descriptor.size() > 10) {
         // Profil biométrique existant ! Comparer le visage soumis avec le profil enregistré.
         double dist = utils::face_distance(attempt.face_descriptor, etudiant.face_descriptor);
-        if (dist > 0.5) {
+        if (dist > 0.55) {
             r.passed  = false;
             r.message = "Échec biométrique: Le visage ne correspond pas au profil enregistré pour ce matricule. (Distance: " + std::to_string(dist) + ")";
             return r;
