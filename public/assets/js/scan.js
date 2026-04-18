@@ -246,10 +246,20 @@ async function submitPresence(e) {
   }
 
   // Fingerprint (Empreinte numérique du téléphone)
-  let deviceId = localStorage.getItem('smartpresence_device_id');
-  if (!deviceId) {
-    deviceId = 'DEV_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-    localStorage.setItem('smartpresence_device_id', deviceId);
+  let deviceId = '';
+  try {
+    deviceId = localStorage.getItem('smartpresence_device_id');
+    if (!deviceId) {
+      deviceId = 'DEV_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      localStorage.setItem('smartpresence_device_id', deviceId);
+    }
+  } catch(err) {
+    // Falback si Navigation Privée stricte (qui bloque localStorage)
+    deviceId = sessionStorage.getItem('sp_session_device');
+    if (!deviceId) {
+      deviceId = 'NPDEV_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      try { sessionStorage.setItem('sp_session_device', deviceId); } catch(e){}
+    }
   }
 
   // Spinner
