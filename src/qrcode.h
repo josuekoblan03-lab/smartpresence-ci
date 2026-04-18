@@ -20,8 +20,8 @@ std::string generate_svg(const std::string& token, int session_id);
 // Vérifier qu'un token est valide (HMAC correct + non expiré)
 bool verify_token(const std::string& token, int session_id, long long qr_expire_at);
 
-// Durée de vie d'un QR Code en secondes
-static const int QR_LIFETIME_SECONDS = 30;
+// Durée de vie d'un QR Code en secondes (1 minute)
+static const int QR_LIFETIME_SECONDS = 60;
 
 // Clé secrète pour signer les tokens QR
 static const std::string QR_SECRET = "SmartPresence_QR_2024!";

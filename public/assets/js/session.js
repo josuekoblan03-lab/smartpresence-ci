@@ -6,7 +6,9 @@
 let activeSessionId = null;
 let countdownTimer  = null;
 let qrInstance      = null;
-let fraudCount      = 0;  // Compteur global des fraudes de la session
+let fraudCount      = 0;       // Compteur global des fraudes de la session
+let lastEventId     = 0;       // Dernier event reçu via polling (anti-doublon)
+let pollTimer       = null;    // Reference au setInterval du polling
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await requireAuth();
@@ -183,7 +185,7 @@ function startQRCountdown(seconds, sessionId) {
 
   const el  = document.getElementById('qr-countdown');
   const bar = document.getElementById('qr-countdown-bar');
-  const total = 30;
+  const total = 60;   // Durée d'un QR Code : 1 minute
   let left = Math.max(0, seconds);
 
   if (bar) bar.style.width = (left / total * 100) + '%';
@@ -265,47 +267,63 @@ function addFraudAlert(data) {
 }
 
 // ─────────────────────────────────────────
-// Polling SSE avec écoute des événements fraude
+// POLLING des événements en temps réel
+// Remplace EventSource (SSE) coupé par le proxy Railway.
+// Appelle /api/events?last_id=X toutes les 3 secondes.
 // ─────────────────────────────────────────
 function listenSSEQR(sessionId) {
-  const es = new EventSource('/api/sse/events');
+  // Stopper le polling précédent si on change de session
+  if (pollTimer) clearInterval(pollTimer);
 
-  // Événement : renouvellement QR
-  es.addEventListener('qr_refresh', (e) => {
-    const d = JSON.parse(e.data);
-    if (d.session_id === sessionId) {
-      refreshQRDisplay(sessionId);
-      showToast('info', '🔄 QR Code renouvellé automatiquement');
-    }
-  });
+  // Appel immédiat puis toutes les 3 secondes
+  fetchSessionEvents(sessionId);
+  pollTimer = setInterval(() => fetchSessionEvents(sessionId), 3000);
+}
 
-  // Événement : présence validée
-  es.addEventListener('presence_marked', (e) => {
-    const d = JSON.parse(e.data);
-    if (d.session_id === sessionId) {
-      // Mettre à jour le compteur présences
-      const det = document.getElementById('qr-session-details');
-      if (det) {
-        const text = det.textContent;
-        det.textContent = text.replace(/\d+ présence\(s\)/, (m) => {
-          const n = parseInt(m) + 1;
-          return n + ' présence(s)';
-        });
+async function fetchSessionEvents(sessionId) {
+  try {
+    // Utiliser apiFetch pour envoyer le JWT (session privée enseignant)
+    const res = await apiFetch(`/api/events?last_id=${lastEventId}`);
+    if (!res) return;
+
+    const data = await res.json();
+    if (!data.success || !data.events || data.events.length === 0) return;
+
+    data.events.forEach(ev => {
+      // Mettre à jour le curseur pour ne pas re-recevoir le même event
+      if (ev.id > lastEventId) lastEventId = ev.id;
+
+      const d = ev.data || {};
+
+      // ── Renouvellement QR ──
+      if (ev.event === 'qr_refresh' && d.session_id === sessionId) {
+        refreshQRDisplay(sessionId);
+        showToast('info', '🔄 QR Code renouvelé automatiquement');
       }
-      showToast('success', `✅ ${d.etudiant_nom} — présence marquée`);
-    }
-  });
 
-  // 🚨 Événement FRAUDE : affichage temps réel dans le panel
-  es.addEventListener('fraud_detected', (e) => {
-    const d = JSON.parse(e.data);
-    // Afficher pour toutes les fraudes (ou filtrer par session)
-    if (!d.session_id || d.session_id === sessionId || !sessionId) {
-      addFraudAlert(d);
-    }
-  });
+      // ── Présence validée ──
+      if (ev.event === 'presence_marked' && d.session_id === sessionId) {
+        const det = document.getElementById('qr-session-details');
+        if (det) {
+          det.textContent = det.textContent.replace(/\d+ présence\(s\)/, m => {
+            return (parseInt(m) + 1) + ' présence(s)';
+          });
+        }
+        showToast('success', `✅ ${d.etudiant_nom || 'Inconnu'} — présence marquée`);
+      }
 
-  es.onerror = () => es.close();
+      // 🚨 FRAUDE DÉTECTÉE — Affichage immédiat dans le panel
+      if (ev.event === 'fraud_detected') {
+        // Filtrer par session ou tout afficher si aucune session active
+        if (!sessionId || !d.session_id || d.session_id === sessionId) {
+          addFraudAlert(d);
+        }
+      }
+    });
+
+  } catch(e) {
+    console.error('[Session Polling] Erreur:', e);
+  }
 }
 
 // ─────────────────────────────────────────
