@@ -195,6 +195,89 @@ ShieldResult check_device_uniqueness(const PresenceAttempt& attempt,
 }
 
 // ──────────────────────────────────────────────────────────────
+// Bouclier 8 : Déplacement interdit pendant le scan (Anti-Triche par relais)
+// ──────────────────────────────────────────────────────────────
+ShieldResult check_gps_stationary(const PresenceAttempt& attempt) {
+    ShieldResult r;
+    r.shield_name = "Bouclier 8 - Stationnement GPS";
+
+    // Si les GPS sont à zéro, c'est que le client a bloqué ou échoué à envoyer le GPS
+    // ou n'a pas pu obtenir la haute précision.
+    if (attempt.gps_start_lat == 0.0 && attempt.gps_start_lng == 0.0) {
+        r.passed  = false;
+        r.message = "Localisation GPS de départ introuvable. Activez votre GPS et autorisez le navigateur.";
+        return r;
+    }
+    if (attempt.gps_end_lat == 0.0 && attempt.gps_end_lng == 0.0) {
+        r.passed  = false;
+        r.message = "Localisation GPS de fin introuvable. La vérification de déplacement a échoué.";
+        return r;
+    }
+
+    double dist = utils::haversine_distance(
+        attempt.gps_start_lat, attempt.gps_start_lng,
+        attempt.gps_end_lat, attempt.gps_end_lng
+    );
+
+    // Marge de 10 mètres pour tolérer les erreurs GPS et le bruit atmosphérique
+    if (dist > 10.0) {
+        r.passed  = false;
+        r.message = "Déplacement suspect détecté pendant la vérification (" + std::to_string(dist) + "m). Vous devez rester immobile.";
+        return r;
+    }
+
+    r.message = "Aucun déplacement suspect détecté (" + std::to_string(dist) + "m)";
+    return r;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Bouclier 9 : Biométrie Faciale (Anti-Copie / Anti-Double visage)
+// ──────────────────────────────────────────────────────────────
+ShieldResult check_facial_biometrics(const PresenceAttempt& attempt,
+                                     Etudiant& etudiant,
+                                     Database& db) {
+    ShieldResult r;
+    r.shield_name = "Bouclier 9 - Biométrie Faciale";
+
+    if (attempt.face_descriptor.empty() || attempt.face_descriptor == "CNVS_ERR") {
+        r.passed  = false;
+        r.message = "Empreinte faciale absente. Impossible de valider la présence.";
+        return r;
+    }
+
+    // 1. Vérifier si ce visage a DÉJÀ été utilisé par un AUTRE étudiant dans cette session
+    std::vector<Presence> presences = db.list_presences(attempt.session_id);
+    for (const auto& p : presences) {
+        if (p.etudiant_id != attempt.etudiant_id && !p.face_descriptor.empty()) {
+            double dist = utils::face_distance(attempt.face_descriptor, p.face_descriptor);
+            if (dist < 0.5) { // Seuil usuel de face-api.js
+                r.passed  = false;
+                r.message = "Fraude absolue: Ce visage a DÉJÀ été validé pour un autre étudiant lors de cette session !";
+                return r;
+            }
+        }
+    }
+
+    // 2. Vérifier l'identité de l'étudiant
+    if (!etudiant.face_descriptor.empty() && etudiant.face_descriptor.size() > 10) {
+        // Profil biométrique existant ! Comparer le visage soumis avec le profil enregistré.
+        double dist = utils::face_distance(attempt.face_descriptor, etudiant.face_descriptor);
+        if (dist > 0.5) {
+            r.passed  = false;
+            r.message = "Échec biométrique: Le visage ne correspond pas au profil enregistré pour ce matricule. (Distance: " + std::to_string(dist) + ")";
+            return r;
+        }
+    } else {
+        // C'est son tout premier scan réussi -> Son profil biométrique est vierge
+        // La sauvegarde finale se fera lors de l'insertion en BD, on ne le fait pas ici.
+        // Mais on l'autorise.
+    }
+
+    r.message = "Identité biométrique confirmée";
+    return r;
+}
+
+// ──────────────────────────────────────────────────────────────
 // Vérification globale : passe tous les boucliers dans l'ordre
 // ──────────────────────────────────────────────────────────────
 ShieldResult verify_all(const PresenceAttempt& attempt,
@@ -229,11 +312,19 @@ ShieldResult verify_all(const PresenceAttempt& attempt,
     ShieldResult r4 = check_no_duplicate(attempt, db);
     if (!r4.passed) { std::cout << "[Shields] ❌ " << r4.shield_name << std::endl; return r4; }
 
-    // Bouclier 7 : unicité de l'appareil (anti l'ami qui scan pour tout le monde)
+    // Bouclier 7 : unicité de l'appareil
     ShieldResult r7 = check_device_uniqueness(attempt, db);
     if (!r7.passed) { std::cout << "[Shields] ❌ " << r7.shield_name << std::endl; return r7; }
 
-    std::cout << "[Shields] ✅ Tous les boucliers validés" << std::endl;
+    // Bouclier 8 : verrouillage stationnaire (GPS)
+    ShieldResult r8 = check_gps_stationary(attempt);
+    if (!r8.passed) { std::cout << "[Shields] ❌ " << r8.shield_name << std::endl; return r8; }
+
+    // Bouclier 9 : biométrie faciale
+    ShieldResult r9 = check_facial_biometrics(attempt, const_cast<Etudiant&>(etudiant), db);
+    if (!r9.passed) { std::cout << "[Shields] ❌ " << r9.shield_name << std::endl; return r9; }
+
+    std::cout << "[Shields] ✅ Tous les 9 boucliers validés" << std::endl;
 
     ShieldResult ok;
     ok.passed  = true;

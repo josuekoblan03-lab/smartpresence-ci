@@ -380,6 +380,11 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
     std::string qr_token       = utils::json_get_str(req.body, "qr_token");
     int session_id             = (int)utils::json_get_int(req.body, "session_id");
     std::string device_id      = utils::json_get_str(req.body, "device_id");
+    std::string gps_start_lat_str = utils::json_get_str(req.body, "gps_start_lat");
+    std::string gps_start_lng_str = utils::json_get_str(req.body, "gps_start_lng");
+    std::string gps_end_lat_str   = utils::json_get_str(req.body, "gps_end_lat");
+    std::string gps_end_lng_str   = utils::json_get_str(req.body, "gps_end_lng");
+    std::string face_descriptor   = utils::json_get_str(req.body, "face_descriptor");
 
     // Fallback form data
     if (matricule.empty()) {
@@ -412,6 +417,18 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
     attempt.ip_client       = req.client_ip;
     attempt.device_id       = device_id;
     attempt.timestamp       = utils::now_unix();
+    try {
+        attempt.gps_start_lat = gps_start_lat_str.empty() ? 0.0 : std::stod(gps_start_lat_str);
+        attempt.gps_start_lng = gps_start_lng_str.empty() ? 0.0 : std::stod(gps_start_lng_str);
+        attempt.gps_end_lat   = gps_end_lat_str.empty()   ? 0.0 : std::stod(gps_end_lat_str);
+        attempt.gps_end_lng   = gps_end_lng_str.empty()   ? 0.0 : std::stod(gps_end_lng_str);
+    } catch(...) {
+        attempt.gps_start_lat = 0.0;
+        attempt.gps_start_lng = 0.0;
+        attempt.gps_end_lat   = 0.0;
+        attempt.gps_end_lng   = 0.0;
+    }
+    attempt.face_descriptor = face_descriptor;
 
     // ── Vérification des 6 boucliers ──
     ShieldResult result = shields::verify_all(attempt, session, etudiant, db);
@@ -448,10 +465,21 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
     p.horodatage  = utils::now_unix();
     p.ip_client   = req.client_ip;
     p.device_id   = device_id;
+    p.gps_start_lat = attempt.gps_start_lat;
+    p.gps_start_lng = attempt.gps_start_lng;
+    p.gps_end_lat   = attempt.gps_end_lat;
+    p.gps_end_lng   = attempt.gps_end_lng;
+    p.face_descriptor = face_descriptor;
     p.valide      = true;
 
     if (!db.mark_presence(p)) {
         return HttpResponse::error(500, "Erreur enregistrement présence");
+    }
+
+    // ── Si c'est son TOUT PREMIER scan, on assigne ce profil biométrique à son matricule ──
+    if (etudiant.face_descriptor.empty() && !face_descriptor.empty()) {
+        db.update_etudiant_face_descriptor(etudiant.id, face_descriptor);
+        std::cout << "[Biométrie] Empreinte faciale initiale enregistrée pour " << etudiant.matricule << std::endl;
     }
 
     // Notifier SSE

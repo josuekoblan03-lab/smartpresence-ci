@@ -35,6 +35,7 @@ struct Etudiant {
     int    filiere_id = 0;
     std::string filiere_nom;
     int    universite_id = 0;
+    std::string face_descriptor; // [NOUVEAU] Profil biométrique (tableau JSON 128 flottants)
     long long created_at = 0;
 };
 
@@ -71,6 +72,11 @@ struct Presence {
     long long horodatage = 0;
     std::string ip_client;
     std::string device_id;
+    double gps_start_lat = 0.0;     // [NOUVEAU] GPS à l'ouverture de la caméra
+    double gps_start_lng = 0.0;
+    double gps_end_lat = 0.0;       // [NOUVEAU] GPS à la soumission
+    double gps_end_lng = 0.0;
+    std::string face_descriptor;    // [NOUVEAU] Visage capturé pour cette présence
     bool   valide = true;
 };
 
@@ -122,6 +128,7 @@ public:
     Etudiant     find_etudiant_by_matricule(const std::string& matricule);
     std::vector<Etudiant> list_etudiants(int filiere_id = 0, int page = 1, int per_page = 50);
     int          count_etudiants(int filiere_id = 0);
+    bool         update_etudiant_face_descriptor(int etudiant_id, const std::string& face);
 
     // ── Filières ──
     bool         create_filiere(const Filiere& f);

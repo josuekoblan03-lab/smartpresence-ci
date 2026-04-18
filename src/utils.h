@@ -285,4 +285,14 @@ inline std::string random_matricule(int index) {
     return oss.str();
 }
 
+// ─────────────────────────────────────────
+// Cacluls GPS et Biométrie
+// ─────────────────────────────────────────
+
+// Calculer la distance en mètres entre deux points GPS
+double haversine_distance(double lat1, double lon1, double lat2, double lon2);
+
+// Calculer la distance euclidienne entre deux visages (tableaux JSON de floats)
+double face_distance(const std::string& desc1, const std::string& desc2);
+
 } // namespace utils

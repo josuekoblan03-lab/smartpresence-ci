@@ -1,5 +1,5 @@
 /* ============================================================
-   scan.js — Logique page scan (présence, QR, countdown)
+   scan.js â€” Logique page scan (prÃ©sence, QR, countdown)
    SMARTPRESENCE CI
    ============================================================ */
 
@@ -8,32 +8,32 @@ let countdownInterval = null;
 let qrCodeInstance = null;
 let qrExpireAt = 0;
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // HARDWARE FINGERPRINTING
-// Lit les caractéristiques PHYSIQUES du téléphone.
-// Ces données NE CHANGENT PAS : ni en incognito, ni en vidant
+// Lit les caractÃ©ristiques PHYSIQUES du tÃ©lÃ©phone.
+// Ces donnÃ©es NE CHANGENT PAS : ni en incognito, ni en vidant
 // le cache, ni en changeant de navigateur (Chrome/Firefox/Safari).
-// On les combine pour créer une "empreinte matérielle" unique.
-// ─────────────────────────────────────────────────────────────
+// On les combine pour crÃ©er une "empreinte matÃ©rielle" unique.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
- * Crée un hash numérique simple (djb2) à partir d'une chaîne.
- * Retourne une chaîne hexadécimale de 8 caractères.
+ * CrÃ©e un hash numÃ©rique simple (djb2) Ã  partir d'une chaÃ®ne.
+ * Retourne une chaÃ®ne hexadÃ©cimale de 8 caractÃ¨res.
  */
 function hashString(str) {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
     hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
-    hash = hash & hash; // Conversion en entier 32-bit signé
+    hash = hash & hash; // Conversion en entier 32-bit signÃ©
   }
-  // Convertir en hexa non-signé sur 8 caractères
+  // Convertir en hexa non-signÃ© sur 8 caractÃ¨res
   return (hash >>> 0).toString(16).padStart(8, '0').toUpperCase();
 }
 
 /**
- * Génère une empreinte canvas.
- * Le rendu du texte varie légèrement selon le GPU et les polices
- * installées sur l'appareil.
+ * GÃ©nÃ¨re une empreinte canvas.
+ * Le rendu du texte varie lÃ©gÃ¨rement selon le GPU et les polices
+ * installÃ©es sur l'appareil.
  */
 function getCanvasFingerprint() {
   try {
@@ -46,7 +46,7 @@ function getCanvasFingerprint() {
     ctx.fillStyle = '#f60';
     ctx.fillRect(125, 1, 62, 20);
     ctx.fillStyle = '#069';
-    ctx.fillText('SmartPresence🎓IUA✓', 2, 15);
+    ctx.fillText('SmartPresenceðŸŽ“IUAâœ“', 2, 15);
     ctx.fillStyle = 'rgba(102,204,0,0.7)';
     ctx.fillText('Empreinte2024', 4, 25);
     return hashString(canvas.toDataURL());
@@ -56,14 +56,14 @@ function getCanvasFingerprint() {
 }
 
 /**
- * Construit l'empreinte matérielle complète du téléphone.
- * Combine : résolution écran, CPU cores, RAM, timezone, langue,
+ * Construit l'empreinte matÃ©rielle complÃ¨te du tÃ©lÃ©phone.
+ * Combine : rÃ©solution Ã©cran, CPU cores, RAM, timezone, langue,
  *           profondeur de couleur, plateforme et canvas fingerprint.
  *
- * RÉSULTAT : une chaîne hexadécimale STABLE peu importe le navigateur.
+ * RÃ‰SULTAT : une chaÃ®ne hexadÃ©cimale STABLE peu importe le navigateur.
  */
 function getHardwareFingerprint() {
-  // Caractéristiques physiques du téléphone
+  // CaractÃ©ristiques physiques du tÃ©lÃ©phone
   const ecranLargeur   = screen.width;          // Ex: 1080
   const ecranHauteur   = screen.height;          // Ex: 2400
   const ecranProfondeur= screen.colorDepth;      // Ex: 24 bits
@@ -76,7 +76,7 @@ function getHardwareFingerprint() {
   // Empreinte du rendu graphique (GPU)
   const empreinteCanvas = getCanvasFingerprint();
 
-  // Assemblage en une chaîne de données combinées
+  // Assemblage en une chaÃ®ne de donnÃ©es combinÃ©es
   const donnees = [
     `ECRAN:${ecranLargeur}x${ecranHauteur}x${ecranProfondeur}`,
     `CPU:${nbCPU}`,
@@ -87,35 +87,36 @@ function getHardwareFingerprint() {
     `CANVAS:${empreinteCanvas}`
   ].join('|');
 
-  // Hash final = "Adresse MAC Virtuelle" du téléphone
+  // Hash final = "Adresse MAC Virtuelle" du tÃ©lÃ©phone
   const empreinte = 'HW_' + hashString(donnees) + '_' + hashString(empreinteCanvas);
 
-  console.log('[SmartPresence] Empreinte matérielle:', empreinte, '\n→ Données:', donnees);
+  console.log('[SmartPresence] Empreinte matÃ©rielle:', empreinte, '\nâ†’ DonnÃ©es:', donnees);
   return empreinte;
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Initialisation de la page
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('DOMContentLoaded', async () => {
-  // Lire les paramètres d'URL
+  loadFaceModels();
+  // Lire les paramÃ¨tres d'URL
   const params = new URLSearchParams(window.location.search);
   const tokenFromUrl = params.get('token');
   const sidFromUrl   = params.get('sid');
 
-  // Préremplir token
+  // PrÃ©remplir token
   if (tokenFromUrl) {
     document.getElementById('qr-token-input').value = tokenFromUrl;
   }
 
-  // Préremplir session_id
+  // PrÃ©remplir session_id
   if (sidFromUrl) {
     currentSessionId = parseInt(sidFromUrl);
     document.getElementById('manual-session-id').value = sidFromUrl;
     await loadSessionInfo(currentSessionId);
   }
 
-  // Formulaire présence
+  // Formulaire prÃ©sence
   document.getElementById('presence-form').addEventListener('submit', submitPresence);
 
   // Majuscules automatiques sur le matricule
@@ -129,25 +130,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Charger info de session
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function loadSessionInfo(sid) {
   sid = sid || parseInt(document.getElementById('manual-session-id').value);
   if (!sid || sid <= 0) {
-    showToast('warning', 'Entrez un numéro de session valide');
+    showToast('warning', 'Entrez un numÃ©ro de session valide');
     return;
   }
 
   currentSessionId = sid;
 
   try {
-    // Récupérer le token QR de la session
+    // RÃ©cupÃ©rer le token QR de la session
     const res  = await fetch(`/api/qrcode/${sid}/token`);
     const data = await res.json();
 
     if (!data.success) {
-      showToast('error', 'Session introuvable ou fermée');
+      showToast('error', 'Session introuvable ou fermÃ©e');
       return;
     }
 
@@ -162,11 +163,11 @@ async function loadSessionInfo(sid) {
       const s = sessionData.session;
       document.getElementById('session-name').textContent = s.titre;
       document.getElementById('session-info').textContent =
-        s.filiere_nom + ' · ' + s.enseignant_nom;
+        s.filiere_nom + ' Â· ' + s.enseignant_nom;
 
       if (s.statut !== 'ouverte') {
-        document.getElementById('session-info').textContent += ' — ⛔ Session fermée';
-        showToast('warning', 'Cette session est fermée.');
+        document.getElementById('session-info').textContent += ' â€” â›” Session fermÃ©e';
+        showToast('warning', 'Cette session est fermÃ©e.');
         return;
       }
     }
@@ -175,10 +176,10 @@ async function loadSessionInfo(sid) {
     displayToken(data.token, data.expires_in, data.expire_at);
     qrExpireAt = data.expire_at;
 
-    // Préremplir le champ token
+    // PrÃ©remplir le champ token
     document.getElementById('qr-token-input').value = data.token;
 
-    // Démarrer le compte à rebours
+    // DÃ©marrer le compte Ã  rebours
     startCountdown(data.expires_in, sid);
 
     // Souscrire aux SSE pour renouvellement automatique
@@ -190,9 +191,9 @@ async function loadSessionInfo(sid) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Afficher token + QR Code JS
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function displayToken(token, expiresIn, expireAt) {
   const tokenZone = document.getElementById('token-zone');
   tokenZone.classList.remove('hidden');
@@ -200,7 +201,7 @@ function displayToken(token, expiresIn, expireAt) {
   const tokenDisplay = document.getElementById('token-display');
   tokenDisplay.textContent = token;
 
-  // Générer le QR Code avec qrcodejs
+  // GÃ©nÃ©rer le QR Code avec qrcodejs
   const canvas = document.getElementById('qr-code-canvas');
   canvas.innerHTML = '';
 
@@ -222,9 +223,9 @@ function displayToken(token, expiresIn, expireAt) {
   document.getElementById('qr-token-input').value = token;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Compte à rebours renouvellement QR
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Compte Ã  rebours renouvellement QR
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function startCountdown(expiresIn, sessionId) {
   if (countdownInterval) clearInterval(countdownInterval);
 
@@ -253,9 +254,9 @@ function startCountdown(expiresIn, sessionId) {
   }, 1000);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Rafraîchir le token QR
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// RafraÃ®chir le token QR
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function refreshQRToken(sessionId) {
   try {
     const res  = await fetch(`/api/qrcode/${sessionId}/token`);
@@ -263,16 +264,16 @@ async function refreshQRToken(sessionId) {
     if (data.success) {
       displayToken(data.token, data.expires_in, data.expire_at);
       startCountdown(data.expires_in, sessionId);
-      showToast('info', '🔄 QR Code renouvelé automatiquement');
+      showToast('info', 'ðŸ”„ QR Code renouvelÃ© automatiquement');
     }
   } catch(e) {
     console.error('[QR] Erreur refresh:', e);
   }
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // SSE pour renouvellement QR
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function listenQRRefresh(sessionId) {
   const es = new EventSource('/api/sse/events');
 
@@ -287,110 +288,111 @@ function listenQRRefresh(sessionId) {
   es.onerror = () => es.close();
 }
 
-// ─────────────────────────────────────────────────────────────
-// SOUMETTRE LA PRÉSENCE
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// SOUMETTRE LA PRÃ‰SENCE
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function submitPresence(e) {
   e.preventDefault();
 
   const matricule      = document.getElementById('matricule').value.trim();
   const codePersonnel  = document.getElementById('code-personnel').value.trim();
   const qrToken        = document.getElementById('qr-token-input').value.trim();
-  const sessionId      = currentSessionId ||
-                          parseInt(document.getElementById('manual-session-id').value) || 0;
+  const sessionId      = currentSessionId || parseInt(document.getElementById('manual-session-id').value) || 0;
 
-  const btn       = document.getElementById('submit-btn');
-  const btnText   = document.getElementById('submit-text');
-  const spinner   = document.getElementById('submit-spinner');
-  const errDiv    = document.getElementById('form-error');
-  const errText   = document.getElementById('error-text');
-
-  // Validation basique
-  if (!matricule || !codePersonnel || !qrToken) {
-    errText.textContent = 'Remplissez tous les champs';
-    errDiv.classList.remove('hidden');
+  if (!matricule || !codePersonnel || !qrToken || !sessionId) {
+    showError('Veuillez remplir correctement tous les champs.');
     return;
   }
 
-  if (codePersonnel.length !== 6 || !/^\d+$/.test(codePersonnel)) {
-    errText.textContent = 'Le code personnel doit être exactement 6 chiffres';
-    errDiv.classList.remove('hidden');
-    return;
-  }
+  const payload = {
+    matricule: matricule,
+    code_personnel: codePersonnel,
+    qr_token: qrToken,
+    session_id: sessionId,
+    device_id: getHardwareFingerprint()
+  };
 
-  if (sessionId <= 0) {
-    errText.textContent = 'Session non sélectionnée. Entrez un numéro de session.';
-    errDiv.classList.remove('hidden');
-    return;
-  }
+  document.getElementById('presence-form').classList.add('hidden');
+  document.getElementById('biometric-scanner').classList.remove('hidden');
+  document.querySelector('.scan-form-title').innerText = "Vérification de sécurité...";
 
-  // ── GÉNÉRATION DE L'EMPREINTE MATÉRIELLE ──────────────────
-  // Lit les caractéristiques physiques du téléphone.
-  // Résultat IDENTIQUE peu importe Chrome/Firefox/Safari/Incognito.
-  const deviceId = getHardwareFingerprint();
-
-  // Spinner et désactivation du bouton
-  btn.disabled = true;
-  btnText.textContent = 'Vérification en cours...';
-  spinner.classList.remove('hidden');
-  errDiv.classList.add('hidden');
-
+  const overlay = document.getElementById('liveness-overlay');
+  const overlayText = document.getElementById('bio-status');
+  
   try {
-    const res = await fetch('/api/presence/mark', {
+    overlay.style.display = 'flex';
+    overlayText.textContent = "Acquisition GPS de départ...";
+    
+    let gps1;
+    try {
+      gps1 = await getExactGPSPosition();
+      document.getElementById('gps-status').classList.remove('hidden');
+      document.getElementById('gps-status').innerText = '?? Position de départ capturée';
+    } catch(err) {
+      throw new Error("Localisation refusée. Activez le GPS.");
+    }
+    
+    if (!faceModelsLoaded) {
+      overlayText.textContent = "Chargement de l'intelligence artificielle...";
+      while(!faceModelsLoaded) await new Promise(r => setTimeout(r, 500));
+    }
+    
+    overlay.style.background = 'transparent'; 
+    let faceDescriptorArray;
+    try {
+      faceDescriptorArray = await startBiometricScan();
+    } catch(err) {
+      throw new Error(err);
+    }
+    
+    overlay.style.background = 'rgba(0,0,0,0.8)';
+    overlayText.textContent = "Validation anti-déplacement (GPS final)...";
+    
+    let gps2;
+    try {
+      gps2 = await getExactGPSPosition();
+      document.getElementById('gps-status').innerText = '?? Position finale vérifiée !';
+    } catch(err) {
+      throw new Error("Impossible de vérifier la postion finale.");
+    }
+    
+    overlayText.textContent = "Envoi sécurisé au serveur...";
+
+    payload.gps_start_lat = gps1.lat.toString();
+    payload.gps_start_lng = gps1.lng.toString();
+    payload.gps_end_lat = gps2.lat.toString();
+    payload.gps_end_lng = gps2.lng.toString();
+    payload.face_descriptor = JSON.stringify(faceDescriptorArray);
+
+    const response = await fetch('/api/presence/mark', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        matricule,
-        code_personnel: codePersonnel,
-        qr_token:       qrToken,
-        session_id:     sessionId,
-        device_id:      deviceId   // Empreinte matérielle du téléphone
-      })
+      body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
+    const data = await response.json();
+    document.getElementById('biometric-scanner').classList.add('hidden');
 
     if (data.success) {
-      // ✅ Succès : animation confetti verte + verrouillage auto 3s
       showSuccess(data.etudiant_nom, data.horodatage);
-
-    } else if (res.status === 403) {
-      // Déterminer le type de blocage pour afficher le bon écran
-      const errMsg = data.error || '';
-      const isFraudDevice =
-        errMsg.includes('téléphone') ||
-        errMsg.includes('appareil')  ||
-        errMsg.includes('Empreinte') ||
-        errMsg.includes('HW_');
-
-      if (isFraudDevice) {
-        // 🔴 Appareil physique déjà utilisé = rouge pulsant + cadenas
-        showFraudBlocked(errMsg);
-      } else {
-        // Autre refus de sécurité (mauvais code, QR expiré...)
-        showError(errMsg);
-        btn.disabled = false;
-        btnText.textContent = '✓ Marquer ma présence';
-        spinner.classList.add('hidden');
-      }
     } else {
-      showError(data.error || 'Présence refusée');
-      btn.disabled = false;
-      btnText.textContent = '✓ Marquer ma présence';
-      spinner.classList.add('hidden');
+      if (data.error && (data.error.includes('HW_') || data.error.includes('HW_') || data.error.includes('Empreinte') || data.error.includes('Biométrique'))) {
+         showFraudBlocked(data.error);
+      } else {
+         showError(data.error || 'Erreur inconnue');
+         document.getElementById('presence-form').classList.remove('hidden');
+      }
     }
 
   } catch(err) {
-    showError('Erreur de connexion au serveur');
-    btn.disabled = false;
-    btnText.textContent = '✓ Marquer ma présence';
-    spinner.classList.add('hidden');
+    document.getElementById('biometric-scanner').classList.add('hidden');
+    document.getElementById('presence-form').classList.remove('hidden');
+    showError(err.message || 'Erreur inconnue');
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// ✅ SUCCÈS : Animation confetti verte + verrouillage auto 3s
-// ─────────────────────────────────────────────────────────────
+// ✅ SUCCÈS
 function showSuccess(nom, horodatage) {
   document.getElementById('presence-form-container').style.display = 'none';
 
@@ -407,29 +409,29 @@ function showSuccess(nom, horodatage) {
       border:2px solid #22c55e;
       animation:fadeIn 0.4s ease;
     ">
-      <div style="font-size:4rem;animation:successBounce 0.6s ease;">✅</div>
-      <h2 style="color:#22c55e;margin:12px 0 6px;font-size:1.5rem;">Présence enregistrée !</h2>
+      <div style="font-size:4rem;animation:successBounce 0.6s ease;">âœ…</div>
+      <h2 style="color:#22c55e;margin:12px 0 6px;font-size:1.5rem;">PrÃ©sence enregistrÃ©e !</h2>
       <p style="color:#86efac;font-size:1rem;">
         <strong>${escHtml(nom)}</strong><br>
         <span style="font-size:0.85rem;color:#4ade80;">&#128336; ${escHtml(horodatage || new Date().toLocaleString('fr-FR'))}</span>
       </p>
       <div style="margin-top:16px;padding:12px;background:rgba(34,197,94,0.1);border-radius:8px;border:1px solid #22c55e;">
-        <p style="color:#86efac;font-size:0.85rem;margin:0;">&#10003; Les 7 boucliers de sécurité validés</p>
+        <p style="color:#86efac;font-size:0.85rem;margin:0;">&#10003; Les 7 boucliers de sÃ©curitÃ© validÃ©s</p>
         <p style="color:#4ade80;font-size:0.8rem;margin:4px 0 0;font-weight:700;">Vous pouvez fermer cette page.</p>
       </div>
-      <div id="lock-countdown" style="margin-top:14px;color:#86efac;font-size:0.8rem;">Page verrouillée dans 3s...</div>
+      <div id="lock-countdown" style="margin-top:14px;color:#86efac;font-size:0.8rem;">Page verrouillÃ©e dans 3s...</div>
     </div>
   `;
 
   lancerConfetti();
-  showToast('success', '✅ Présence validée !', 5000);
+  showToast('success', 'âœ… PrÃ©sence validÃ©e !', 5000);
 
-  // Verrouillage automatique après 3 secondes
+  // Verrouillage automatique aprÃ¨s 3 secondes
   let t = 3;
   const cd = setInterval(() => {
     t--;
     const el = document.getElementById('lock-countdown');
-    if (el) el.textContent = t > 0 ? `Page verrouillée dans ${t}s...` : 'Page verrouillée.';
+    if (el) el.textContent = t > 0 ? `Page verrouillÃ©e dans ${t}s...` : 'Page verrouillÃ©e.';
     if (t <= 0) {
       clearInterval(cd);
       verrouiller('success');
@@ -437,10 +439,10 @@ function showSuccess(nom, horodatage) {
   }, 1000);
 }
 
-// ─────────────────────────────────────────────────────────────
-// 🔴 FRAUDE APPAREIL : Fond rouge pulsant + cadenas animé
-// L'empreinte matérielle du téléphone correspond à un autre étudiant
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ðŸ”´ FRAUDE APPAREIL : Fond rouge pulsant + cadenas animÃ©
+// L'empreinte matÃ©rielle du tÃ©lÃ©phone correspond Ã  un autre Ã©tudiant
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showFraudBlocked(message) {
   document.getElementById('presence-form-container').style.display = 'none';
 
@@ -458,28 +460,28 @@ function showFraudBlocked(message) {
       animation:pulseFraud 1.5s ease infinite;
     ">
       <div style="font-size:4rem;animation:lockShake 0.5s ease;">&#128274;</div>
-      <h2 style="color:#ef4444;margin:12px 0 6px;font-size:1.4rem;">🔴 Tentative de fraude détectée</h2>
+      <h2 style="color:#ef4444;margin:12px 0 6px;font-size:1.4rem;">ðŸ”´ Tentative de fraude dÃ©tectÃ©e</h2>
       <p style="color:#fca5a5;font-size:0.9rem;line-height:1.6;">
-        Cet appareil a déjà été utilisé pour valider<br>
-        une présence dans cette session.<br><br>
-        <strong style="color:#f87171;">Tentative signalée à l'enseignant</strong>
+        Cet appareil a dÃ©jÃ  Ã©tÃ© utilisÃ© pour valider<br>
+        une prÃ©sence dans cette session.<br><br>
+        <strong style="color:#f87171;">Tentative signalÃ©e Ã  l'enseignant</strong>
       </p>
       <div style="margin-top:16px;padding:12px;background:rgba(239,68,68,0.15);border-radius:8px;border:1px solid #ef4444;">
-        <p style="color:#fca5a5;font-size:0.82rem;margin:0;">&#x26D4; Appareil physique blacklisté automatiquement</p>
-        <p style="color:#f87171;font-size:0.8rem;margin:6px 0 0;">Changer de navigateur ou vider le cache<br>ne changera rien — votre matériel est identifié.</p>
+        <p style="color:#fca5a5;font-size:0.82rem;margin:0;">&#x26D4; Appareil physique blacklistÃ© automatiquement</p>
+        <p style="color:#f87171;font-size:0.8rem;margin:6px 0 0;">Changer de navigateur ou vider le cache<br>ne changera rien â€” votre matÃ©riel est identifiÃ©.</p>
       </div>
     </div>
   `;
 
   if ('vibrate' in navigator) navigator.vibrate([200, 100, 200, 100, 400]);
-  showToast('error', '🔴 Fraude détectée ! Enseignant notifié.', 8000);
+  showToast('error', 'ðŸ”´ Fraude dÃ©tectÃ©e ! Enseignant notifiÃ©.', 8000);
   verrouiller('fraud');
 }
 
-// ─────────────────────────────────────────────────────────────
-// Afficher une erreur simple (mauvais code, QR expiré...)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Afficher une erreur simple (mauvais code, QR expirÃ©...)
 // Le formulaire reste accessible pour une nouvelle tentative
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showError(message) {
   const errDiv  = document.getElementById('form-error');
   const errText = document.getElementById('error-text');
@@ -488,9 +490,9 @@ function showError(message) {
   if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Verrouiller complètement la page (aucune interaction possible)
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Verrouiller complÃ¨tement la page (aucune interaction possible)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function verrouiller(type) {
   document.querySelectorAll('button, input, select, textarea').forEach(el => {
     el.disabled = true;
@@ -508,9 +510,9 @@ function verrouiller(type) {
   document.body.appendChild(overlay);
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Lancer des confetti (animation CSS dynamique)
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function lancerConfetti() {
   const couleurs = ['#22c55e','#4ade80','#86efac','#fbbf24','#34d399','#a3e635'];
   for (let i = 0; i < 40; i++) {
@@ -532,16 +534,16 @@ function lancerConfetti() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Reset formulaire (usage interne)
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function resetForm() {
   document.getElementById('presence-form-container').style.display = '';
   document.getElementById('scan-result').classList.add('hidden');
   document.getElementById('presence-form').reset();
   document.getElementById('form-error').classList.add('hidden');
   document.getElementById('submit-btn').disabled = false;
-  document.getElementById('submit-text').textContent = '✓ Marquer ma présence';
+  document.getElementById('submit-text').textContent = 'âœ“ Marquer ma prÃ©sence';
   document.getElementById('submit-spinner').classList.add('hidden');
 
   if (currentSessionId) {
@@ -549,10 +551,133 @@ function resetForm() {
   }
 }
 
-// Helper escHtml (au cas où app.js pas chargé)
+// Helper escHtml (au cas oÃ¹ app.js pas chargÃ©)
 function escHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// -------------------------------------------------------------
+// BIOMÉTRIE & GPS : Preuve de Vie et Anti-Relais
+// -------------------------------------------------------------
+let faceModelsLoaded = false;
+
+async function loadFaceModels() {
+  try {
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    faceModelsLoaded = true;
+    console.log('[Biometrie] Modèles chargés');
+  } catch(e) {
+    console.error('[Biometrie] Erreur chargement modèles:', e);
+  }
+}
+
+function getExactGPSPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject('GPS non supporté');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({lat: pos.coords.latitude, lng: pos.coords.longitude}),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+}
+
+function computeEAR(eye) {
+  const dist = (p1, p2) => Math.sqrt(Math.pow(p1.x-p2.x, 2) + Math.pow(p1.y-p2.y, 2));
+  const v1 = dist(eye[1], eye[5]);
+  const v2 = dist(eye[2], eye[4]);
+  const h  = dist(eye[0], eye[3]);
+  return (v1 + v2) / (2.0 * h);
+}
+
+async function startBiometricScan() {
+  return new Promise(async (resolve, reject) => {
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('faceCanvas');
+    const bioStatus = document.getElementById('bio-status');
+    const bioSpinner = document.getElementById('bio-spinner');
+    
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      video.srcObject = stream;
+    } catch(e) {
+      reject('Erreur caméra: Veuillez autoriser la webcam.');
+      return;
+    }
+
+    bioStatus.textContent = "Caméra prête. Regardez l'écran.";
+    
+    video.addEventListener('play', async () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const displaySize = { width: video.videoWidth, height: video.videoHeight };
+      faceapi.matchDimensions(canvas, displaySize);
+      
+      let blinked = false;
+      let frameCount = 0;
+      
+      bioStatus.textContent = "Veuillez CLIGNER DES YEUX";
+      bioSpinner.style.display = 'none';
+
+      const scanInterval = setInterval(async () => {
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+                                        .withFaceLandmarks()
+                                        .withFaceDescriptors();
+        
+        if (!stream.active) return; // Prevent async overlaps if stopped
+        
+        const resized = faceapi.resizeResults(detections, displaySize);
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        faceapi.draw.drawFaceLandmarks(canvas, resized);
+
+        if (detections.length === 0) {
+           bioStatus.textContent = "Aucun visage détecté";
+           return;
+        }
+        if (detections.length > 1) {
+           bioStatus.textContent = "?? Un seul visage autorisé !";
+           return;
+        }
+
+        const face = detections[0];
+        const landmarks = face.landmarks;
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+
+        const leftEAR = computeEAR(leftEye);
+        const rightEAR= computeEAR(rightEye);
+        const ear = (leftEAR + rightEAR) / 2.0;
+
+        if (ear < 0.22) { // Yeux fermés
+            blinked = true;
+            bioStatus.textContent = "Clignement détecté... Ne bougez plus !";
+        } else if (blinked && ear > 0.28) { // Yeux rouverts
+            // Succès absolu Liveness
+            clearInterval(scanInterval);
+            
+            // Attendre 300ms que le visage soit bien stable
+            setTimeout(async () => {
+              const finalDet = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                                         .withFaceLandmarks().withFaceDescriptor();
+              
+              stream.getTracks().forEach(t => t.stop());
+              if (!finalDet) reject("Impossible d'extraire le visage final");
+              else resolve(Array.from(finalDet.descriptor));
+            }, 300);
+        } else {
+             if (!blinked) bioStatus.textContent = "Veuillez CLIGNER DES YEUX pour prouver que vous êtes humain";
+        }
+      }, 100);
+    });
+  });
 }

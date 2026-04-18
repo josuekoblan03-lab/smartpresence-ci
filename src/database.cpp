@@ -121,8 +121,16 @@ void Database::create_schema() {
     )");
 
     // Migration (ignore l'erreur si la colonne existe déjà)
+    // Migration (ignore l'erreur si la colonne existe déjà)
     exec("ALTER TABLE presences ADD COLUMN device_id TEXT;");
-
+    
+    // Migrations GPS + Facial
+    exec("ALTER TABLE etudiants ADD COLUMN face_descriptor TEXT;");
+    exec("ALTER TABLE presences ADD COLUMN gps_start_lat REAL;");
+    exec("ALTER TABLE presences ADD COLUMN gps_start_lng REAL;");
+    exec("ALTER TABLE presences ADD COLUMN gps_end_lat REAL;");
+    exec("ALTER TABLE presences ADD COLUMN gps_end_lng REAL;");
+    exec("ALTER TABLE presences ADD COLUMN face_descriptor TEXT;");
     // ── Logs de fraude ──
     exec(R"(
         CREATE TABLE IF NOT EXISTS fraude_logs (
@@ -342,7 +350,7 @@ Etudiant Database::find_etudiant_by_id(int id) {
     Etudiant e;
     auto rows = query(
         "SELECT e.id, e.matricule, e.nom, e.prenom, e.email, e.code_personnel,"
-        "       e.filiere_id, e.universite_id, f.nom as filiere_nom"
+        "       e.filiere_id, e.universite_id, e.face_descriptor, f.nom as filiere_nom"
         " FROM etudiants e LEFT JOIN filieres f ON f.id = e.filiere_id"
         " WHERE e.id = " + std::to_string(id) + " LIMIT 1"
     );
@@ -356,6 +364,7 @@ Etudiant Database::find_etudiant_by_id(int id) {
         e.code_personnel = r["code_personnel"];
         e.filiere_id     = std::stoi(r["filiere_id"]);
         e.universite_id  = std::stoi(r["universite_id"]);
+        e.face_descriptor= r["face_descriptor"];
         e.filiere_nom    = r["filiere_nom"];
     }
     return e;
@@ -365,7 +374,7 @@ Etudiant Database::find_etudiant_by_matricule(const std::string& matricule) {
     Etudiant e;
     sqlite3_stmt* stmt = prepare(
         "SELECT e.id, e.matricule, e.nom, e.prenom, e.email, e.code_personnel,"
-        "       e.filiere_id, e.universite_id, f.nom as filiere_nom"
+        "       e.filiere_id, e.universite_id, e.face_descriptor, f.nom as filiere_nom"
         " FROM etudiants e LEFT JOIN filieres f ON f.id = e.filiere_id"
         " WHERE e.matricule = ? LIMIT 1"
     );
@@ -384,7 +393,8 @@ Etudiant Database::find_etudiant_by_matricule(const std::string& matricule) {
         e.code_personnel = col(5);
         e.filiere_id     = sqlite3_column_int(stmt, 6);
         e.universite_id  = sqlite3_column_int(stmt, 7);
-        e.filiere_nom    = col(8);
+        e.face_descriptor= col(8);
+        e.filiere_nom    = col(9);
     }
     sqlite3_finalize(stmt);
     return e;
@@ -565,8 +575,8 @@ std::vector<SessionCours> Database::list_sessions(int enseignant_id, int limit) 
 // ──────────────────────────────────────────────────────────────
 bool Database::mark_presence(const Presence& p) {
     sqlite3_stmt* stmt = prepare(
-        "INSERT OR IGNORE INTO presences (session_id, etudiant_id, horodatage, ip_client, device_id, valide)"
-        " VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT OR IGNORE INTO presences (session_id, etudiant_id, horodatage, ip_client, device_id, gps_start_lat, gps_start_lng, gps_end_lat, gps_end_lng, face_descriptor, valide)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     if (!stmt) return false;
     sqlite3_bind_int(stmt,  1, p.session_id);
@@ -574,7 +584,12 @@ bool Database::mark_presence(const Presence& p) {
     sqlite3_bind_int64(stmt,3, p.horodatage > 0 ? p.horodatage : utils::now_unix());
     sqlite3_bind_text(stmt, 4, p.ip_client.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 5, p.device_id.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt,  6, p.valide ? 1 : 0);
+    sqlite3_bind_double(stmt,  6, p.gps_start_lat);
+    sqlite3_bind_double(stmt,  7, p.gps_start_lng);
+    sqlite3_bind_double(stmt,  8, p.gps_end_lat);
+    sqlite3_bind_double(stmt,  9, p.gps_end_lng);
+    sqlite3_bind_text(stmt, 10, p.face_descriptor.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,  11, p.valide ? 1 : 0);
     bool ok = sqlite3_step(stmt) == SQLITE_DONE;
     sqlite3_finalize(stmt);
     return ok && sqlite3_changes(db_) > 0;
@@ -593,7 +608,7 @@ bool Database::has_presence(int session_id, int etudiant_id) {
 std::vector<Presence> Database::list_presences(int session_id) {
     std::vector<Presence> list;
     auto rows = query(
-        "SELECT p.id, p.session_id, p.etudiant_id, p.horodatage, p.ip_client, p.valide,"
+        "SELECT p.id, p.session_id, p.etudiant_id, p.horodatage, p.ip_client, p.valide, p.face_descriptor,"
         "       e.nom || ' ' || e.prenom as etudiant_nom, e.matricule"
         " FROM presences p LEFT JOIN etudiants e ON e.id = p.etudiant_id"
         " WHERE p.session_id = " + std::to_string(session_id) +
@@ -609,6 +624,7 @@ std::vector<Presence> Database::list_presences(int session_id) {
         p.valide          = r["valide"] == "1";
         p.etudiant_nom    = r["etudiant_nom"];
         p.etudiant_matricule = r["matricule"];
+        p.face_descriptor = r["face_descriptor"];
         list.push_back(p);
     }
     return list;
@@ -736,4 +752,14 @@ std::string Database::get_current_qr_token(int session_id) {
     );
     if (!rows.empty()) return rows[0]["qr_token"];
     return "";
+}
+
+bool Database::update_etudiant_face_descriptor(int id, const std::string& desc) {
+    sqlite3_stmt* stmt = prepare("UPDATE etudiants SET face_descriptor = ? WHERE id = ?");
+    if (!stmt) return false;
+    sqlite3_bind_text(stmt, 1, desc.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 2, id);
+    bool ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return ok && sqlite3_changes(db_) > 0;
 }
