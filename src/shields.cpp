@@ -169,10 +169,11 @@ ShieldResult check_device_uniqueness(const PresenceAttempt& attempt,
     ShieldResult r;
     r.shield_name = "Bouclier 7 - Unicité Matérielle";
 
-    // Si on n'a pas de device_id (vieux navigateur ou proxy bloquant localStorage)
-    // On passe, ce n'est pas bloquant, on laisse Bouclier 6 (IP) gérer les abus massifs.
+    // Si on n'a pas de device_id (navigateur sans cache) on bloque immédiatement.
+    // Cela force le téléphone à re-télécharger le nouveau script scan.js?v=2
     if (attempt.device_id.empty()) {
-        r.message = "Aucune empreinte (Tolérance appliquée)";
+        r.passed  = false;
+        r.message = "Fraude: Traceur de sécurité manquant. (Veuillez rafraîchir la page ou vider le cache)";
         return r;
     }
 
