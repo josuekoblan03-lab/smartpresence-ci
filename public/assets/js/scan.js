@@ -630,7 +630,7 @@ async function startBiometricScan() {
       bioSpinner.style.display = 'none';
 
       const scanInterval = setInterval(async () => {
-        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 }))
                                         .withFaceLandmarks()
                                         .withFaceDescriptors();
         
@@ -658,16 +658,16 @@ async function startBiometricScan() {
         const rightEAR= computeEAR(rightEye);
         const ear = (leftEAR + rightEAR) / 2.0;
 
-        if (ear < 0.22) { // Yeux fermés
+        if (ear < 0.26) { // Yeux fermés
             blinked = true;
             bioStatus.textContent = "Clignement détecté... Ne bougez plus !";
-        } else if (blinked && ear > 0.28) { // Yeux rouverts
+        } else if (blinked && ear > 0.27) { // Yeux rouverts
             // Succès absolu Liveness
             clearInterval(scanInterval);
             
             // Attendre 300ms que le visage soit bien stable
             setTimeout(async () => {
-              const finalDet = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+              const finalDet = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 }))
                                          .withFaceLandmarks().withFaceDescriptor();
               
               stream.getTracks().forEach(t => t.stop());
