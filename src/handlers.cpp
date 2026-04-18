@@ -15,16 +15,20 @@ std::string get_embedding_from_python(const std::string& base64_image) {
     
     httplib::Client cli("127.0.0.1", 5000);
     cli.set_connection_timeout(5, 0);
-    cli.set_read_timeout(10, 0);
+    cli.set_read_timeout(15, 0);
     
-    crow::json::wvalue py_req;
-    py_req["base64_image"] = base64_image;
+    std::string py_req = "{"base64_image":"" + base64_image + ""}";
     
-    if (auto res = cli.Post("/analyze", py_req.dump(), "application/json")) {
+    if (auto res = cli.Post("/analyze", py_req, "application/json")) {
         if (res->status == 200) {
-            auto data = crow::json::load(res->body);
-            if (data && data["success"].b()) {
-                return data["embedding"].dump();
+            std::string body = res->body;
+            size_t succ = body.find(""success": true");
+            if (succ != std::string::npos || body.find(""success":true") != std::string::npos) {
+                size_t arr_s = body.find("[");
+                size_t arr_e = body.find("]");
+                if (arr_s != std::string::npos && arr_e != std::string::npos && arr_e > arr_s) {
+                    return body.substr(arr_s, arr_e - arr_s + 1);
+                }
             }
         }
     }
