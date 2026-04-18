@@ -23,6 +23,13 @@ struct PresenceAttempt {
     std::string ip_client;
     std::string device_id;         // Empreinte numérique du navigateur
     long long   timestamp;
+    
+    // Champs Biométrie & Anti-Déplacement
+    double      gps_start_lat = 0.0;
+    double      gps_start_lng = 0.0;
+    double      gps_end_lat   = 0.0;
+    double      gps_end_lng   = 0.0;
+    std::string face_descriptor;
 };
 
 namespace shields {
