@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // handlers.cpp — Implémentation de tous les handlers API REST
 // SMARTPRESENCE CI
 // ============================================================
@@ -17,13 +17,13 @@ std::string get_embedding_from_python(const std::string& base64_image) {
     cli.set_connection_timeout(5, 0);
     cli.set_read_timeout(15, 0);
     
-    std::string py_req = "{"base64_image":"" + base64_image + ""}";
+    std::string py_req = "{\"base64_image\":\"" + base64_image + "\"}";
     
     if (auto res = cli.Post("/analyze", py_req, "application/json")) {
         if (res->status == 200) {
             std::string body = res->body;
-            size_t succ = body.find(""success": true");
-            if (succ != std::string::npos || body.find(""success":true") != std::string::npos) {
+            size_t succ = body.find("\"success\": true");
+            if (succ != std::string::npos || body.find("\"success\":true") != std::string::npos) {
                 size_t arr_s = body.find("[");
                 size_t arr_e = body.find("]");
                 if (arr_s != std::string::npos && arr_e != std::string::npos && arr_e > arr_s) {
