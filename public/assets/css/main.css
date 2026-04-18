@@ -1098,3 +1098,36 @@ select.form-input {
 .overflow-hidden { overflow: hidden; }
 .relative { position: relative; }
 .absolute { position: absolute; }
+
+/* ????????????????????????????????????????
+   Animations Anti-Fraude & Retour Visuel
+   ???????????????????????????????????????? */
+@keyframes successBounce {
+  0%   { transform: scale(0.3) rotate(-10deg); opacity:0; }
+  60%  { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); opacity:1; }
+}
+
+@keyframes pulseFraud {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50%       { box-shadow: 0 0 0 14px rgba(239,68,68,0); }
+}
+
+@keyframes lockShake {
+  0%  { transform: translateX(0) rotate(0deg); }
+  20% { transform: translateX(-8px) rotate(-5deg); }
+  40% { transform: translateX(8px) rotate(5deg); }
+  60% { transform: translateX(-6px) rotate(-3deg); }
+  80% { transform: translateX(6px) rotate(3deg); }
+  100%{ transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity:1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity:0; }
+}
+
+@keyframes fraudSlideIn {
+  from { opacity:0; transform:translateY(-12px); }
+  to   { opacity:1; transform:translateY(0); }
+}

@@ -77,7 +77,9 @@ std::string presence_marked(const std::string& etudiant_nom,
 std::string fraud_detected(const std::string& type_fraude,
                             const std::string& description,
                             const std::string& ip,
-                            int session_id);
+                            const std::string& matricule,
+                            int session_id,
+                            long long horodatage);
 
 // Renouvellement QR Code
 std::string qr_refresh(int session_id, const std::string& new_token);

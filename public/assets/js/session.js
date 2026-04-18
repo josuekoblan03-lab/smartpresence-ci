@@ -6,6 +6,7 @@
 let activeSessionId = null;
 let countdownTimer  = null;
 let qrInstance      = null;
+let fraudCount      = 0;  // Compteur global des fraudes de la session
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await requireAuth();
@@ -203,9 +204,73 @@ function startQRCountdown(seconds, sessionId) {
   }, 1000);
 }
 
-// SSE pour QR refresh
+// ─────────────────────────────────────────
+// 🚨 Ajouter une alerte fraude dans le panel
+// ─────────────────────────────────────────
+function addFraudAlert(data) {
+  // Masquer le message "aucune fraude" s'il est visible
+  const emptyMsg = document.getElementById('fraud-empty');
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  // Incrémenter le compteur et mettre à jour le badge
+  fraudCount++;
+  const badge = document.getElementById('fraud-badge');
+  if (badge) {
+    badge.textContent = `${fraudCount} tentative${fraudCount > 1 ? 's' : ''}`;
+    // Animation flash sur le badge
+    badge.style.animation = 'none';
+    setTimeout(() => { badge.style.animation = 'pulseFraud 1s ease 3'; }, 10);
+  }
+
+  // Créer la carte alerte
+  const card = document.createElement('div');
+  card.style.cssText = `
+    padding:14px 16px;
+    background:rgba(239,68,68,0.08);
+    border:1px solid rgba(239,68,68,0.3);
+    border-left:4px solid #ef4444;
+    border-radius:10px;
+    animation:fraudSlideIn 0.3s ease;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+  `;
+
+  // Heure de la tentative
+  const heure = data.heure || new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+  const matricule = data.matricule || '????';
+  const typeFraude = data.type_fraude || 'Inconnu';
+  const description = data.description || 'Tentative suspecte';
+
+  card.innerHTML = `
+    <div style="font-size:1.4rem;">🔴</div>
+    <div style="flex:1;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <span class="badge" style="background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid rgba(239,68,68,0.4);font-size:0.75rem;">FRAUDE DÉTECTÉE</span>
+        <span style="font-size:0.78rem;color:var(--text-muted);font-family:var(--font-mono);">⏰ ${escHtml(heure)}</span>
+        <span style="font-size:0.78rem;color:var(--text-muted);">IP: ${escHtml(data.ip || '?')}</span>
+      </div>
+      <div style="font-weight:700;color:#f87171;font-size:0.9rem;">Matricule&nbsp;: ${escHtml(matricule)}</div>
+      <div style="font-size:0.82rem;color:#fca5a5;margin-top:2px;">${escHtml(typeFraude)}</div>
+      <div style="font-size:0.79rem;color:var(--text-muted);margin-top:3px;">${escHtml(description)}</div>
+    </div>
+  `;
+
+  // Insérer EN HAUT de la liste (plus récent en premier)
+  const list = document.getElementById('fraud-list');
+  if (list) list.insertBefore(card, list.firstChild);
+
+  // Toast d'alerte pour le professeur
+  showToast('error', `🛑 Fraude — Matricule ${matricule} — ${typeFraude}`, 6000);
+}
+
+// ─────────────────────────────────────────
+// Polling SSE avec écoute des événements fraude
+// ─────────────────────────────────────────
 function listenSSEQR(sessionId) {
   const es = new EventSource('/api/sse/events');
+
+  // Événement : renouvellement QR
   es.addEventListener('qr_refresh', (e) => {
     const d = JSON.parse(e.data);
     if (d.session_id === sessionId) {
@@ -213,6 +278,8 @@ function listenSSEQR(sessionId) {
       showToast('info', '🔄 QR Code renouvellé automatiquement');
     }
   });
+
+  // Événement : présence validée
   es.addEventListener('presence_marked', (e) => {
     const d = JSON.parse(e.data);
     if (d.session_id === sessionId) {
@@ -228,6 +295,16 @@ function listenSSEQR(sessionId) {
       showToast('success', `✅ ${d.etudiant_nom} — présence marquée`);
     }
   });
+
+  // 🚨 Événement FRAUDE : affichage temps réel dans le panel
+  es.addEventListener('fraud_detected', (e) => {
+    const d = JSON.parse(e.data);
+    // Afficher pour toutes les fraudes (ou filtrer par session)
+    if (!d.session_id || d.session_id === sessionId || !sessionId) {
+      addFraudAlert(d);
+    }
+  });
+
   es.onerror = () => es.close();
 }
 

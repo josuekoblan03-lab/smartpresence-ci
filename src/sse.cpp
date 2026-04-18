@@ -138,12 +138,17 @@ std::string presence_marked(const std::string& etudiant_nom,
 std::string fraud_detected(const std::string& type_fraude,
                             const std::string& description,
                             const std::string& ip,
-                            int session_id) {
+                            const std::string& matricule,
+                            int session_id,
+                            long long horodatage) {
     return "{" +
-        utils::json_str("type_fraude", type_fraude)  + "," +
-        utils::json_str("description", description)  + "," +
-        utils::json_str("ip",          ip)            + "," +
-        utils::json_num("session_id",  session_id)   +
+        utils::json_str("type_fraude", type_fraude)                        + "," +
+        utils::json_str("description", description)                        + "," +
+        utils::json_str("ip",          ip)                                 + "," +
+        utils::json_str("matricule",   matricule)                           + "," +
+        utils::json_str("heure",       utils::format_datetime(horodatage)) + "," +
+        utils::json_num("horodatage",  horodatage)                         + "," +
+        utils::json_num("session_id",  session_id)                         +
         "}";
 }
 

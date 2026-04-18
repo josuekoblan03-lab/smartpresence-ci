@@ -426,13 +426,15 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
         fraude.ip_client   = req.client_ip;
         db.log_fraude(fraude);
 
-        // Notifier SSE
+        // Notifier le tableau de bord en temps réel
         SSEManager::instance().broadcast("fraud_detected",
             sse_events::fraud_detected(
                 result.shield_name,
                 result.message,
                 req.client_ip,
-                session_id
+                etudiant.matricule,
+                session_id,
+                utils::now_unix()
             )
         );
 

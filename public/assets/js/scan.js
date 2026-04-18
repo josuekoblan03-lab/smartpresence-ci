@@ -284,7 +284,25 @@ async function submitPresence(e) {
     const data = await res.json();
 
     if (data.success) {
+      // ✅ Succès : animation confetti verte + grisage auto 3s
       showSuccess(data.etudiant_nom, data.horodatage);
+    } else if (res.status === 403) {
+      // Déterminer le type d'erreur pour afficher le bon écran
+      const errMsg = data.error || '';
+      const isFraudDevice = errMsg.includes('téléphone') ||
+                            errMsg.includes('appareil') ||
+                            errMsg.includes('Empreinte') ||
+                            errMsg.includes('Device');
+      if (isFraudDevice) {
+        // 🔴 Appareil déjà utilisé = rouge pulsant + cadenas
+        showFraudBlocked(errMsg);
+      } else {
+        // Autre erreur de sécurité (code faux, QR expiré, etc.)
+        showError(errMsg);
+        btn.disabled = false;
+        btnText.textContent = '✓ Marquer ma présence';
+        spinner.classList.add('hidden');
+      }
     } else {
       showError(data.error || 'Présence refusée');
       btn.disabled = false;
@@ -320,20 +338,157 @@ function showSuccess(nom, horodatage) {
     Les 7 boucliers de sécurité ont été validés.
   `;
 
-  showToast('success', '✅ Présence enregistrée avec succès !', 5000);
+// ─────────────────────────────────────────
+// ✅ SUCCÈS : Animation confetti + grisage auto
+// ─────────────────────────────────────────
+function showSuccess(nom, horodatage) {
+  // Cacher le formulaire pour éviter nouvelle soumission
+  document.getElementById('presence-form-container').style.display = 'none';
+
+  const result = document.getElementById('scan-result');
+  result.className = 'scan-result'; // Reset
+  result.classList.remove('hidden');
+
+  result.innerHTML = `
+    <div id="confetti-zone" style="
+      text-align:center;
+      padding:40px 20px;
+      background: linear-gradient(135deg,#0d2e1a,#0a3d21);
+      border-radius:16px;
+      border:2px solid #22c55e;
+      animation: fadeIn 0.4s ease;
+    ">
+      <div style="font-size:4rem;animation:successBounce 0.6s ease;">✅</div>
+      <h2 style="color:#22c55e;margin:12px 0 6px;font-size:1.5rem;">Présence enregistrée !</h2>
+      <p style="color:#86efac;font-size:1rem;">
+        <strong>${escHtml(nom)}</strong><br>
+        <span style="font-size:0.85rem;color:#4ade80;">&#128336; ${escHtml(horodatage || new Date().toLocaleString('fr-FR'))}</span>
+      </p>
+      <div style="margin-top:16px;padding:12px;background:rgba(34,197,94,0.1);border-radius:8px;border:1px solid #22c55e;">
+        <p style="color:#86efac;font-size:0.85rem;margin:0;">&#10003; Les 7 boucliers de sécurité validés</p>
+        <p style="color:#4ade80;font-size:0.8rem;margin:4px 0 0;font-weight:700;">Vous pouvez fermer cette page.</p>
+      </div>
+      <div id="lock-countdown" style="margin-top:14px;color:#86efac;font-size:0.8rem;">Page verrouillée dans 3s...</div>
+    </div>
+  `;
+
+  // Lancer les confetti
+  lancerConfetti();
+
+  showToast('success', '✅ Présence validée !', 5000);
+
+  // Griser et verrouiller la page au bout de 3s
+  let t = 3;
+  const cd = setInterval(() => {
+    t--;
+    const el = document.getElementById('lock-countdown');
+    if (el) el.textContent = t > 0 ? `Page verrouillée dans ${t}s...` : 'Page verrouillée.';
+    if (t <= 0) {
+      clearInterval(cd);
+      verrouiller('success');
+    }
+  }, 1000);
 }
 
 // ─────────────────────────────────────────
-// Afficher l'erreur
+// 🔴 FRAUDE APPAREIL : Fond rouge pulsant + cadenas animé
+// ─────────────────────────────────────────
+function showFraudBlocked(message) {
+  // Cacher complètement le formulaire
+  document.getElementById('presence-form-container').style.display = 'none';
+
+  const result = document.getElementById('scan-result');
+  result.className = 'scan-result';
+  result.classList.remove('hidden');
+
+  result.innerHTML = `
+    <div style="
+      text-align:center;
+      padding:40px 20px;
+      background: linear-gradient(135deg,#2d0a0a,#450a0a);
+      border-radius:16px;
+      border:2px solid #ef4444;
+      animation: pulseFraud 1.5s ease infinite;
+    ">
+      <div style="font-size:4rem;animation:lockShake 0.5s ease;">&#128274;</div>
+      <h2 style="color:#ef4444;margin:12px 0 6px;font-size:1.4rem;">🔴 Tentative de fraude détectée</h2>
+      <p style="color:#fca5a5;font-size:0.9rem;line-height:1.5;">
+        Cet appareil a déjà été utilisé pour valider une présence dans cette session.<br><br>
+        <strong style="color:#f87171;">Tentative signalée à l'enseignant</strong><br>
+        <span style="font-size:0.78rem;color:#fca5a5;">${escHtml(message)}</span>
+      </p>
+      <div style="margin-top:16px;padding:12px;background:rgba(239,68,68,0.15);border-radius:8px;border:1px solid #ef4444;">
+        <p style="color:#fca5a5;font-size:0.82rem;margin:0;">⛔ Appareil blacklisté automatiquement</p>
+        <p style="color:#f87171;font-size:0.82rem;margin:4px 0 0;font-weight:700;">Aucune autre action n'est possible.</p>
+      </div>
+    </div>
+  `;
+
+  // Vibration d'alerte
+  if ('vibrate' in navigator) navigator.vibrate([200, 100, 200, 100, 400]);
+
+  showToast('error', '🔴 Fraude détectée ! Enseignant notifié.', 8000);
+
+  // Verrouiller immédiatement
+  verrouiller('fraud');
+}
+
+// ─────────────────────────────────────────
+// Afficher une erreur simple (code faux, QR expiré...)
 // ─────────────────────────────────────────
 function showError(message) {
   const errDiv  = document.getElementById('form-error');
   const errText = document.getElementById('error-text');
   errText.textContent = message;
   errDiv.classList.remove('hidden');
-
-  // Vibration si disponible
+  // Vibration simple
   if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+}
+
+// ─────────────────────────────────────────
+// Verrouiller complètement la page
+// ─────────────────────────────────────────
+function verrouiller(type) {
+  // Bloquer tout élément interactif sur la page
+  document.querySelectorAll('button, input, select, textarea').forEach(el => {
+    el.disabled = true;
+  });
+  // Empêcher le clic partout
+  document.body.style.pointerEvents = 'none';
+  // Ajouter une overlay gris/rouge selon le type
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;
+    ${ type === 'fraud'
+      ? 'background:rgba(239,68,68,0.15);'
+      : 'background:rgba(0,0,0,0.4);'}
+    pointer-events:all;
+  `;
+  document.body.appendChild(overlay);
+}
+
+// ─────────────────────────────────────────
+// Lancer des confetti (animation CSS dynamique)
+// ─────────────────────────────────────────
+function lancerConfetti() {
+  const couleurs = ['#22c55e','#4ade80','#86efac','#fbbf24','#34d399','#a3e635'];
+  for (let i = 0; i < 40; i++) {
+    const el = document.createElement('div');
+    el.style.cssText = `
+      position:fixed;
+      top:-10px;
+      left:${Math.random()*100}vw;
+      width:${Math.random()*10+5}px;
+      height:${Math.random()*10+5}px;
+      background:${couleurs[Math.floor(Math.random()*couleurs.length)]};
+      border-radius:${Math.random()>0.5?'50%':'2px'};
+      z-index:9998;
+      animation: confettiFall ${Math.random()*2+1.5}s ease forwards;
+      opacity:0.85;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
 }
 
 // ─────────────────────────────────────────
