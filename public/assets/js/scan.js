@@ -458,9 +458,7 @@ async function startBiometricScan() {
       
       const actions = [
         { id: 'gauche', msg: "Tournez la tête à GAUCHE ⬅️" },
-        { id: 'droite', msg: "Tournez la tête à DROITE ➡️" },
-        { id: 'haut', msg: "Levez la tête vers le HAUT ⬆️" },
-        { id: 'bas', msg: "Baissez la tête vers le BAS ⬇️" }
+        { id: 'droite', msg: "Tournez la tête à DROITE ➡️" }
       ];
       const targetAction = actions[Math.floor(Math.random() * actions.length)];
       let actionReussie = false;
@@ -499,12 +497,6 @@ async function startBiometricScan() {
         } else if (targetAction.id === 'droite') {
            const yaw = computeYaw(landmarks);
            if (yaw < 0.6) targetReached = true;
-        } else if (targetAction.id === 'haut') {
-           const pitch = computePitch(landmarks);
-           if (pitch > 2.2) targetReached = true;
-        } else if (targetAction.id === 'bas') {
-           const pitch = computePitch(landmarks);
-           if (pitch < 0.6) targetReached = true;
         }
 
         if (targetReached && !actionReussie) { 
