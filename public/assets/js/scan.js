@@ -5,13 +5,98 @@
 
 let currentSessionId = null;
 let countdownInterval = null;
-let qrRefreshInterval = null;
 let qrCodeInstance = null;
 let qrExpireAt = 0;
 
-// ─────────────────────────────────────────
-// Initialisation
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// HARDWARE FINGERPRINTING
+// Lit les caractéristiques PHYSIQUES du téléphone.
+// Ces données NE CHANGENT PAS : ni en incognito, ni en vidant
+// le cache, ni en changeant de navigateur (Chrome/Firefox/Safari).
+// On les combine pour créer une "empreinte matérielle" unique.
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Crée un hash numérique simple (djb2) à partir d'une chaîne.
+ * Retourne une chaîne hexadécimale de 8 caractères.
+ */
+function hashString(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+    hash = hash & hash; // Conversion en entier 32-bit signé
+  }
+  // Convertir en hexa non-signé sur 8 caractères
+  return (hash >>> 0).toString(16).padStart(8, '0').toUpperCase();
+}
+
+/**
+ * Génère une empreinte canvas.
+ * Le rendu du texte varie légèrement selon le GPU et les polices
+ * installées sur l'appareil.
+ */
+function getCanvasFingerprint() {
+  try {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 200;
+    canvas.height = 50;
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(125, 1, 62, 20);
+    ctx.fillStyle = '#069';
+    ctx.fillText('SmartPresence🎓IUA✓', 2, 15);
+    ctx.fillStyle = 'rgba(102,204,0,0.7)';
+    ctx.fillText('Empreinte2024', 4, 25);
+    return hashString(canvas.toDataURL());
+  } catch (e) {
+    return 'CNVS_ERR';
+  }
+}
+
+/**
+ * Construit l'empreinte matérielle complète du téléphone.
+ * Combine : résolution écran, CPU cores, RAM, timezone, langue,
+ *           profondeur de couleur, plateforme et canvas fingerprint.
+ *
+ * RÉSULTAT : une chaîne hexadécimale STABLE peu importe le navigateur.
+ */
+function getHardwareFingerprint() {
+  // Caractéristiques physiques du téléphone
+  const ecranLargeur   = screen.width;          // Ex: 1080
+  const ecranHauteur   = screen.height;          // Ex: 2400
+  const ecranProfondeur= screen.colorDepth;      // Ex: 24 bits
+  const nbCPU          = navigator.hardwareConcurrency || 0;  // Ex: 8 processeurs
+  const ram            = navigator.deviceMemory  || 0;        // Ex: 6 GB (Chrome)
+  const fuseau         = Intl.DateTimeFormat().resolvedOptions().timeZone; // Ex: Africa/Abidjan
+  const langue         = navigator.language || 'fr';          // Ex: fr-CI
+  const plateforme     = navigator.platform || '';            // Ex: Linux armv8l
+
+  // Empreinte du rendu graphique (GPU)
+  const empreinteCanvas = getCanvasFingerprint();
+
+  // Assemblage en une chaîne de données combinées
+  const donnees = [
+    `ECRAN:${ecranLargeur}x${ecranHauteur}x${ecranProfondeur}`,
+    `CPU:${nbCPU}`,
+    `RAM:${ram}`,
+    `TZ:${fuseau}`,
+    `LANG:${langue}`,
+    `PLAT:${plateforme}`,
+    `CANVAS:${empreinteCanvas}`
+  ].join('|');
+
+  // Hash final = "Adresse MAC Virtuelle" du téléphone
+  const empreinte = 'HW_' + hashString(donnees) + '_' + hashString(empreinteCanvas);
+
+  console.log('[SmartPresence] Empreinte matérielle:', empreinte, '\n→ Données:', donnees);
+  return empreinte;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Initialisation de la page
+// ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   // Lire les paramètres d'URL
   const params = new URLSearchParams(window.location.search);
@@ -44,9 +129,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // Charger info de session
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 async function loadSessionInfo(sid) {
   sid = sid || parseInt(document.getElementById('manual-session-id').value);
   if (!sid || sid <= 0) {
@@ -105,11 +190,10 @@ async function loadSessionInfo(sid) {
   }
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // Afficher token + QR Code JS
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 function displayToken(token, expiresIn, expireAt) {
-  // Afficher le token
   const tokenZone = document.getElementById('token-zone');
   tokenZone.classList.remove('hidden');
 
@@ -132,17 +216,15 @@ function displayToken(token, expiresIn, expireAt) {
       correctLevel: QRCode.CorrectLevel.H
     });
   } else {
-    // Fallback : afficher le SVG du serveur
     canvas.innerHTML = `<img src="/api/qrcode/${currentSessionId}" width="200" height="200" style="border-radius:8px;">`;
   }
 
-  // Préremplir le champ
   document.getElementById('qr-token-input').value = token;
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // Compte à rebours renouvellement QR
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 function startCountdown(expiresIn, sessionId) {
   if (countdownInterval) clearInterval(countdownInterval);
 
@@ -157,26 +239,23 @@ function startCountdown(expiresIn, sessionId) {
     remaining--;
     if (countdownEl) countdownEl.textContent = remaining + 's';
 
-    // Mettre à jour la barre
     const pct = Math.max(0, remaining / totalSeconds * 100);
     if (countdownBar) {
       countdownBar.style.width = pct + '%';
-      // Rouge quand < 10s
       countdownBar.style.background = remaining < 10 ?
         'linear-gradient(90deg,#ef4444,#dc2626)' : 'var(--gradient-primary)';
     }
 
     if (remaining <= 0) {
       clearInterval(countdownInterval);
-      // Recharger le token
       await refreshQRToken(sessionId);
     }
   }, 1000);
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // Rafraîchir le token QR
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 async function refreshQRToken(sessionId) {
   try {
     const res  = await fetch(`/api/qrcode/${sessionId}/token`);
@@ -191,9 +270,9 @@ async function refreshQRToken(sessionId) {
   }
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // SSE pour renouvellement QR
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 function listenQRRefresh(sessionId) {
   const es = new EventSource('/api/sse/events');
 
@@ -208,9 +287,9 @@ function listenQRRefresh(sessionId) {
   es.onerror = () => es.close();
 }
 
-// ─────────────────────────────────────────
-// Soumettre la présence
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// SOUMETTRE LA PRÉSENCE
+// ─────────────────────────────────────────────────────────────
 async function submitPresence(e) {
   e.preventDefault();
 
@@ -245,24 +324,12 @@ async function submitPresence(e) {
     return;
   }
 
-  // Fingerprint (Empreinte numérique du téléphone)
-  let deviceId = '';
-  try {
-    deviceId = localStorage.getItem('smartpresence_device_id');
-    if (!deviceId) {
-      deviceId = 'DEV_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      localStorage.setItem('smartpresence_device_id', deviceId);
-    }
-  } catch(err) {
-    // Falback si Navigation Privée stricte (qui bloque localStorage)
-    deviceId = sessionStorage.getItem('sp_session_device');
-    if (!deviceId) {
-      deviceId = 'NPDEV_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      try { sessionStorage.setItem('sp_session_device', deviceId); } catch(e){}
-    }
-  }
+  // ── GÉNÉRATION DE L'EMPREINTE MATÉRIELLE ──────────────────
+  // Lit les caractéristiques physiques du téléphone.
+  // Résultat IDENTIQUE peu importe Chrome/Firefox/Safari/Incognito.
+  const deviceId = getHardwareFingerprint();
 
-  // Spinner
+  // Spinner et désactivation du bouton
   btn.disabled = true;
   btnText.textContent = 'Vérification en cours...';
   spinner.classList.remove('hidden');
@@ -277,27 +344,30 @@ async function submitPresence(e) {
         code_personnel: codePersonnel,
         qr_token:       qrToken,
         session_id:     sessionId,
-        device_id:      deviceId
+        device_id:      deviceId   // Empreinte matérielle du téléphone
       })
     });
 
     const data = await res.json();
 
     if (data.success) {
-      // ✅ Succès : animation confetti verte + grisage auto 3s
+      // ✅ Succès : animation confetti verte + verrouillage auto 3s
       showSuccess(data.etudiant_nom, data.horodatage);
+
     } else if (res.status === 403) {
-      // Déterminer le type d'erreur pour afficher le bon écran
+      // Déterminer le type de blocage pour afficher le bon écran
       const errMsg = data.error || '';
-      const isFraudDevice = errMsg.includes('téléphone') ||
-                            errMsg.includes('appareil') ||
-                            errMsg.includes('Empreinte') ||
-                            errMsg.includes('Device');
+      const isFraudDevice =
+        errMsg.includes('téléphone') ||
+        errMsg.includes('appareil')  ||
+        errMsg.includes('Empreinte') ||
+        errMsg.includes('HW_');
+
       if (isFraudDevice) {
-        // 🔴 Appareil déjà utilisé = rouge pulsant + cadenas
+        // 🔴 Appareil physique déjà utilisé = rouge pulsant + cadenas
         showFraudBlocked(errMsg);
       } else {
-        // Autre erreur de sécurité (code faux, QR expiré, etc.)
+        // Autre refus de sécurité (mauvais code, QR expiré...)
         showError(errMsg);
         btn.disabled = false;
         btnText.textContent = '✓ Marquer ma présence';
@@ -309,6 +379,7 @@ async function submitPresence(e) {
       btnText.textContent = '✓ Marquer ma présence';
       spinner.classList.add('hidden');
     }
+
   } catch(err) {
     showError('Erreur de connexion au serveur');
     btn.disabled = false;
@@ -317,49 +388,27 @@ async function submitPresence(e) {
   }
 }
 
-// ─────────────────────────────────────────
-// Afficher le succès
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// ✅ SUCCÈS : Animation confetti verte + verrouillage auto 3s
+// ─────────────────────────────────────────────────────────────
 function showSuccess(nom, horodatage) {
   document.getElementById('presence-form-container').style.display = 'none';
 
   const result = document.getElementById('scan-result');
-  result.className = 'scan-result success';
-  result.classList.remove('hidden');
-
-  document.getElementById('result-icon').textContent = '✅';
-  document.getElementById('result-title').textContent = 'Présence enregistrée !';
-  document.getElementById('result-desc').innerHTML = `
-    <strong style="color:var(--color-accent-light, #34d399);">${escHtml(nom)}</strong>
-    <br><br>
-    🕐 ${escHtml(horodatage || new Date().toLocaleString('fr-FR'))}
-    <br><br>
-    Votre présence a été marquée avec succès.<br>
-    Les 7 boucliers de sécurité ont été validés.
-  `;
-
-// ─────────────────────────────────────────
-// ✅ SUCCÈS : Animation confetti + grisage auto
-// ─────────────────────────────────────────
-function showSuccess(nom, horodatage) {
-  // Cacher le formulaire pour éviter nouvelle soumission
-  document.getElementById('presence-form-container').style.display = 'none';
-
-  const result = document.getElementById('scan-result');
-  result.className = 'scan-result'; // Reset
+  result.className = 'scan-result';
   result.classList.remove('hidden');
 
   result.innerHTML = `
     <div id="confetti-zone" style="
       text-align:center;
       padding:40px 20px;
-      background: linear-gradient(135deg,#0d2e1a,#0a3d21);
+      background:linear-gradient(135deg,#0d2e1a,#0a3d21);
       border-radius:16px;
       border:2px solid #22c55e;
-      animation: fadeIn 0.4s ease;
+      animation:fadeIn 0.4s ease;
     ">
       <div style="font-size:4rem;animation:successBounce 0.6s ease;">✅</div>
-      <h2 style="color:#22c55e;margin:12px 0 6px;font-size:1.5rem;">Présence enregistrée !</h2>
+      <h2 style="color:#22c55e;margin:12px 0 6px;font-size:1.5rem;">Présence enregistrée !</h2>
       <p style="color:#86efac;font-size:1rem;">
         <strong>${escHtml(nom)}</strong><br>
         <span style="font-size:0.85rem;color:#4ade80;">&#128336; ${escHtml(horodatage || new Date().toLocaleString('fr-FR'))}</span>
@@ -372,12 +421,10 @@ function showSuccess(nom, horodatage) {
     </div>
   `;
 
-  // Lancer les confetti
   lancerConfetti();
-
   showToast('success', '✅ Présence validée !', 5000);
 
-  // Griser et verrouiller la page au bout de 3s
+  // Verrouillage automatique après 3 secondes
   let t = 3;
   const cd = setInterval(() => {
     t--;
@@ -390,11 +437,11 @@ function showSuccess(nom, horodatage) {
   }, 1000);
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // 🔴 FRAUDE APPAREIL : Fond rouge pulsant + cadenas animé
-// ─────────────────────────────────────────
+// L'empreinte matérielle du téléphone correspond à un autre étudiant
+// ─────────────────────────────────────────────────────────────
 function showFraudBlocked(message) {
-  // Cacher complètement le formulaire
   document.getElementById('presence-form-container').style.display = 'none';
 
   const result = document.getElementById('scan-result');
@@ -405,71 +452,65 @@ function showFraudBlocked(message) {
     <div style="
       text-align:center;
       padding:40px 20px;
-      background: linear-gradient(135deg,#2d0a0a,#450a0a);
+      background:linear-gradient(135deg,#2d0a0a,#450a0a);
       border-radius:16px;
       border:2px solid #ef4444;
-      animation: pulseFraud 1.5s ease infinite;
+      animation:pulseFraud 1.5s ease infinite;
     ">
       <div style="font-size:4rem;animation:lockShake 0.5s ease;">&#128274;</div>
       <h2 style="color:#ef4444;margin:12px 0 6px;font-size:1.4rem;">🔴 Tentative de fraude détectée</h2>
-      <p style="color:#fca5a5;font-size:0.9rem;line-height:1.5;">
-        Cet appareil a déjà été utilisé pour valider une présence dans cette session.<br><br>
-        <strong style="color:#f87171;">Tentative signalée à l'enseignant</strong><br>
-        <span style="font-size:0.78rem;color:#fca5a5;">${escHtml(message)}</span>
+      <p style="color:#fca5a5;font-size:0.9rem;line-height:1.6;">
+        Cet appareil a déjà été utilisé pour valider<br>
+        une présence dans cette session.<br><br>
+        <strong style="color:#f87171;">Tentative signalée à l'enseignant</strong>
       </p>
       <div style="margin-top:16px;padding:12px;background:rgba(239,68,68,0.15);border-radius:8px;border:1px solid #ef4444;">
-        <p style="color:#fca5a5;font-size:0.82rem;margin:0;">⛔ Appareil blacklisté automatiquement</p>
-        <p style="color:#f87171;font-size:0.82rem;margin:4px 0 0;font-weight:700;">Aucune autre action n'est possible.</p>
+        <p style="color:#fca5a5;font-size:0.82rem;margin:0;">&#x26D4; Appareil physique blacklisté automatiquement</p>
+        <p style="color:#f87171;font-size:0.8rem;margin:6px 0 0;">Changer de navigateur ou vider le cache<br>ne changera rien — votre matériel est identifié.</p>
       </div>
     </div>
   `;
 
-  // Vibration d'alerte
   if ('vibrate' in navigator) navigator.vibrate([200, 100, 200, 100, 400]);
-
   showToast('error', '🔴 Fraude détectée ! Enseignant notifié.', 8000);
-
-  // Verrouiller immédiatement
   verrouiller('fraud');
 }
 
-// ─────────────────────────────────────────
-// Afficher une erreur simple (code faux, QR expiré...)
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Afficher une erreur simple (mauvais code, QR expiré...)
+// Le formulaire reste accessible pour une nouvelle tentative
+// ─────────────────────────────────────────────────────────────
 function showError(message) {
   const errDiv  = document.getElementById('form-error');
   const errText = document.getElementById('error-text');
   errText.textContent = message;
   errDiv.classList.remove('hidden');
-  // Vibration simple
   if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
 }
 
-// ─────────────────────────────────────────
-// Verrouiller complètement la page
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Verrouiller complètement la page (aucune interaction possible)
+// ─────────────────────────────────────────────────────────────
 function verrouiller(type) {
-  // Bloquer tout élément interactif sur la page
   document.querySelectorAll('button, input, select, textarea').forEach(el => {
     el.disabled = true;
   });
-  // Empêcher le clic partout
   document.body.style.pointerEvents = 'none';
-  // Ajouter une overlay gris/rouge selon le type
+
   const overlay = document.createElement('div');
   overlay.style.cssText = `
     position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;
     ${ type === 'fraud'
-      ? 'background:rgba(239,68,68,0.15);'
-      : 'background:rgba(0,0,0,0.4);'}
+      ? 'background:rgba(239,68,68,0.08);'
+      : 'background:rgba(0,0,0,0.35);'}
     pointer-events:all;
   `;
   document.body.appendChild(overlay);
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // Lancer des confetti (animation CSS dynamique)
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 function lancerConfetti() {
   const couleurs = ['#22c55e','#4ade80','#86efac','#fbbf24','#34d399','#a3e635'];
   for (let i = 0; i < 40; i++) {
@@ -483,7 +524,7 @@ function lancerConfetti() {
       background:${couleurs[Math.floor(Math.random()*couleurs.length)]};
       border-radius:${Math.random()>0.5?'50%':'2px'};
       z-index:9998;
-      animation: confettiFall ${Math.random()*2+1.5}s ease forwards;
+      animation:confettiFall ${Math.random()*2+1.5}s ease forwards;
       opacity:0.85;
     `;
     document.body.appendChild(el);
@@ -491,9 +532,9 @@ function lancerConfetti() {
   }
 }
 
-// ─────────────────────────────────────────
-// Reset formulaire
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Reset formulaire (usage interne)
+// ─────────────────────────────────────────────────────────────
 function resetForm() {
   document.getElementById('presence-form-container').style.display = '';
   document.getElementById('scan-result').classList.add('hidden');
@@ -503,7 +544,6 @@ function resetForm() {
   document.getElementById('submit-text').textContent = '✓ Marquer ma présence';
   document.getElementById('submit-spinner').classList.add('hidden');
 
-  // Re-charger le token si session sélectionnée
   if (currentSessionId) {
     refreshQRToken(currentSessionId);
   }

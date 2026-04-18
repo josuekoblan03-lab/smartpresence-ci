@@ -186,7 +186,7 @@ ShieldResult check_device_uniqueness(const PresenceAttempt& attempt,
     // Si le device a une présence, c'est que le device a scanné pour qq d'autre !
     if (db.has_device_voted(attempt.session_id, attempt.device_id)) {
         r.passed  = false;
-        r.message = "Fraude: Ce téléphone a déjà validé la présence d'un autre étudiant durant cette session.";
+        r.message = "Fraude: Ce téléphone a déjà validé la présence d'un autre étudiant durant cette session. L'empreinte matérielle (HW_) de cet appareil est blacklistée.";
         return r;
     }
 
