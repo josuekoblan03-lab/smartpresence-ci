@@ -306,6 +306,19 @@ HttpResponse create_session(const HttpRequest& req, Database& db) {
 // ──────────────────────────────────────────────────────────────
 // GET /api/sessions/:id
 // ──────────────────────────────────────────────────────────────
+HttpResponse get_public_session_info(const HttpRequest& req, Database& db) {
+    int sid = 0;
+    auto it = req.query.find("sid");
+    if (it != req.query.end()) sid = std::stoi(it->second);
+    if (sid <= 0) return HttpResponse::error(400, "ID invalide");
+
+    SessionCours s = db.find_session_by_id(sid);
+    if (s.id == 0 || !s.actif) return HttpResponse::error(404, "Session introuvable");
+
+    std::string json = "{\"success\":true,\"session\":{\"titre\":\"" + utils::escape_json(s.titre) + "\",\"date_creation\":\"" + utils::escape_json(s.date_creation) + "\"}}";
+    return HttpResponse::ok(json);
+}
+
 HttpResponse get_session(const HttpRequest& req, Database& db) {
     JWTClaims claims = get_claims(req);
     if (!claims.valid) return HttpResponse::error(401, "Non authentifié");

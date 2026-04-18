@@ -107,6 +107,10 @@ void Router::register_routes() {
     }, true);
 
     // ── Sessions ──
+    add_route("GET",  "/api/presence/session_info", [this](const HttpRequest& req) {
+        return handlers::get_public_session_info(req, db_);
+    }, false);
+
     add_route("GET",  "/api/sessions",         [this](const HttpRequest& req) {
         return handlers::list_sessions(req, db_);
     }, true);

@@ -31,6 +31,7 @@ HttpResponse get_qrcode_token(const HttpRequest& req, Database& db);
 // ── Présences ──
 HttpResponse mark_presence(const HttpRequest& req, Database& db);
 HttpResponse list_presences(const HttpRequest& req, Database& db);
+HttpResponse get_public_session_info(const HttpRequest& req, Database& db);
 
 // ── Étudiants ──
 HttpResponse list_students(const HttpRequest& req, Database& db);
