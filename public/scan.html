@@ -1,34 +1,32 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Scan PrÃ©sence â€” SMARTPRESENCE CI</title>
-  <meta name="description" content="Page de scan QR Code pour marquer sa prÃ©sence">
+  <title>Scan Présence — SMARTPRESENCE CI</title>
+  <meta name="description" content="Page de scan QR Code pour marquer sa présence">
   <meta name="theme-color" content="#0f0e17">
   <link rel="stylesheet" href="/assets/css/main.css">
   <link rel="stylesheet" href="/assets/css/scan.css">
-  <!-- QRCode.js â€” Lib JS pour scanner et afficher les QR Codes -->
+  <!-- QRCode.js — Lib JS pour scanner et afficher les QR Codes -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Face-API.js â€” Reconnaissance faciale et Liveness -->
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 </head>
 <body>
   <div class="scan-page">
 
     <!-- Header -->
     <header class="scan-header">
-      <div class="scan-header-logo">ðŸŽ“</div>
+      <div class="scan-header-logo">🎓</div>
       <div class="scan-header-title">SMARTPRESENCE CI</div>
     </header>
 
     <!-- Contenu -->
     <div class="scan-content">
 
-      <!-- Saisie de la session (si pas passÃ©e en URL) -->
+      <!-- Saisie de la session (si pas passée en URL) -->
       <div id="session-selector" class="mb-6">
         <div class="form-group">
-          <label class="form-label">ðŸ”¢ NumÃ©ro de session (optionnel)</label>
+          <label class="form-label">🔢 Numéro de session (optionnel)</label>
           <div style="display:flex;gap:10px;">
             <input type="number" id="manual-session-id" class="form-input"
               placeholder="Ex: 1" min="1">
@@ -40,15 +38,15 @@
       <!-- Bandeau session -->
       <div id="session-banner" class="session-banner hidden">
         <div class="session-banner-title">Session ouverte</div>
-        <div class="session-banner-name" id="session-name">â€”</div>
-        <div class="session-banner-info" id="session-info">â€”</div>
+        <div class="session-banner-name" id="session-name">—</div>
+        <div class="session-banner-info" id="session-info">—</div>
       </div>
 
       <!-- Token QR -->
       <div id="token-zone" class="hidden mb-6" style="text-align:center;">
         <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">Token actif :</p>
         <div class="token-display" id="token-display">Chargement...</div>
-        <!-- QR Code gÃ©nÃ©rÃ© par JS -->
+        <!-- QR Code généré par JS -->
         <div id="qr-code-canvas" style="margin:16px auto;width:fit-content;background:white;padding:12px;border-radius:12px;"></div>
         <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;">
           <div style="font-size:0.78rem;color:var(--text-muted);">Renouvellement dans</div>
@@ -59,57 +57,36 @@
         </div>
       </div>
 
-      <!-- SÃ©parateur -->
+      <!-- Séparateur -->
       <div class="scan-divider">
         <div class="scan-divider-line"></div>
-        <div class="scan-divider-text">Marquer ma prÃ©sence</div>
+        <div class="scan-divider-text">Marquer ma présence</div>
         <div class="scan-divider-line"></div>
       </div>
 
-      <!-- RÃ©sultat -->
+      <!-- Résultat -->
       <div id="scan-result" class="scan-result hidden">
-        <span class="scan-result-icon" id="result-icon">âœ…</span>
-        <div class="scan-result-title" id="result-title">PrÃ©sence enregistrÃ©e !</div>
+        <span class="scan-result-icon" id="result-icon">✅</span>
+        <div class="scan-result-title" id="result-title">Présence enregistrée !</div>
         <div class="scan-result-desc" id="result-desc"></div>
         <button class="btn btn-outline btn-full" style="margin-top:20px;" onclick="resetForm()">
-          â†© Faire une autre prÃ©sence
+          ↩ Faire une autre présence
         </button>
       </div>
 
       <!-- Formulaire de marquage -->
       <div id="presence-form-container">
-        
-        <!-- Scanner BiomÃ©trique (cachÃ© par dÃ©faut) -->
-        <div id="biometric-scanner" class="mb-6 hidden" style="text-align: center; border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.2);">
-          <div class="scan-form-title" style="color: var(--color-accent);"><span class="icon">ðŸ“·</span> Reconnaissance Faciale & GPS</div>
-          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 12px;">Veuillez <strong>cligner des yeux</strong> pour valider votre prÃ©sence. Ne bougez pas l'appareil.</p>
-          
-          <div style="position: relative; width: 100%; max-width: 300px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-            <video id="videoElement" autoplay muted playsinline style="width: 100%; height: auto; transform: scaleX(-1); display: block;"></video>
-            <canvas id="faceCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
-            
-            <div id="liveness-overlay" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); color: white; font-weight: bold; flex-direction: column; z-index: 10;">
-              <div class="spinner" id="bio-spinner" style="margin-bottom: 10px; width: 30px; height: 30px; border-top-color: var(--color-accent); border-right-color: var(--color-accent);"></div>
-              <span id="bio-status" style="font-size: 0.85rem; padding: 0 10px; text-align: center;">Initialisation des modules...</span>
-            </div>
-          </div>
-          
-          <div style="margin-top: 10px; font-size: 0.75rem; color: var(--color-success); font-weight: bold;" id="gps-status" class="hidden">
-            ðŸ“ Position GPS VerrouillÃ©e
-          </div>
-        </div>
-
         <div class="scan-form-title">Saisissez vos informations</div>
         <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:20px;">
-          Votre matricule et code personnel vous ont Ã©tÃ© fournis par l'administration.
+          Votre matricule et code personnel vous ont été fournis par l'administration.
         </p>
 
         <form class="scan-form" id="presence-form">
           <!-- Matricule -->
           <div class="form-group mb-4">
-            <label class="form-label">ðŸ“‹ Matricule Ã©tudiant</label>
+            <label class="form-label">📋 Matricule étudiant</label>
             <div class="input-with-icon">
-              <span class="input-icon">ðŸŽ“</span>
+              <span class="input-icon">🎓</span>
               <input type="text" id="matricule" class="form-input"
                 placeholder="IUA2024000001"
                 required
@@ -121,11 +98,11 @@
 
           <!-- Code personnel (PIN) -->
           <div class="form-group mb-4">
-            <label class="form-label">ðŸ” Code personnel (6 chiffres)</label>
+            <label class="form-label">🔐 Code personnel (6 chiffres)</label>
             <div class="input-with-icon">
-              <span class="input-icon">ðŸ”‘</span>
+              <span class="input-icon">🔑</span>
               <input type="password" id="code-personnel" class="form-input pin-input"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••"
                 required
                 maxlength="6"
                 pattern="[0-9]{6}"
@@ -133,11 +110,11 @@
             </div>
           </div>
 
-          <!-- Token QR (prÃ©-rempli depuis URL) -->
+          <!-- Token QR (pré-rempli depuis URL) -->
           <div class="form-group mb-4">
-            <label class="form-label">ðŸ“± Token QR Code</label>
+            <label class="form-label">📱 Token QR Code</label>
             <div class="input-with-icon">
-              <span class="input-icon">ðŸ”²</span>
+              <span class="input-icon">🔲</span>
               <input type="text" id="qr-token-input" class="form-input"
                 placeholder="SP_1_..."
                 required
@@ -145,19 +122,19 @@
                 style="font-family:var(--font-mono);font-size:0.82rem;">
             </div>
             <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">
-              Copiez le token affichÃ© sur le tableau ou rÃ©cupÃ©rez-le de l'URL de scan.
+              Copiez le token affiché sur le tableau ou récupérez-le de l'URL de scan.
             </div>
           </div>
 
           <!-- Erreur -->
           <div id="form-error" class="alert alert-error hidden" style="margin-bottom:16px;">
-            <span>âš ï¸</span>
+            <span>⚠️</span>
             <span id="error-text">Erreur</span>
           </div>
 
           <!-- Bouton submit -->
           <button type="submit" id="submit-btn" class="btn btn-accent btn-full btn-scan-submit">
-            <span id="submit-text">âœ“ Marquer ma prÃ©sence</span>
+            <span id="submit-text">✓ Marquer ma présence</span>
             <div id="submit-spinner" class="spinner hidden" style="width:20px;height:20px;margin-left:8px;"></div>
           </button>
         </form>
@@ -168,14 +145,14 @@
     <!-- Barre de statut -->
     <div class="scan-status-bar">
       <div class="live-dot" id="status-dot" style="width:6px;height:6px;background:var(--color-accent);animation:pulse 2s infinite;"></div>
-      <span id="status-text">SystÃ¨me actif Â· 9 boucliers anti-fraude en ligne</span>
+      <span id="status-text">Système actif · 6 boucliers anti-fraude en ligne</span>
     </div>
   </div>
 
   <!-- Toast -->
   <div id="toast-container"></div>
 
-  <script src="/assets/js/app.js?v=4"></script>
-  <script src="/assets/js/scan.js?v=4"></script>
+  <script src="/assets/js/app.js"></script>
+  <script src="/assets/js/scan.js"></script>
 </body>
 </html>
