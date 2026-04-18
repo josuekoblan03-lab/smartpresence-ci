@@ -414,12 +414,25 @@ function getExactGPSPosition() {
   });
 }
 
-function computeEAR(eye) {
+function computeYaw(landmarks) {
+  const nose = landmarks.getNose()[3];
+  const jawline = landmarks.getJawOutline();
+  const leftEdge = jawline[0];
+  const rightEdge = jawline[16];
+  const distLeft = nose.x - leftEdge.x;
+  const distRight = rightEdge.x - nose.x;
+  return distLeft / distRight;
+}
+
+function computeSmile(landmarks) {
+  const mouth = landmarks.getMouth();
+  const leftEye = landmarks.getLeftEye();
+  const rightEye = landmarks.getRightEye();
   const dist = (p1, p2) => Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-  const v1 = dist(eye[1], eye[5]);
-  const v2 = dist(eye[2], eye[4]);
-  const h  = dist(eye[0], eye[3]);
-  return (v1 + v2) / (2.0 * h);
+  
+  const mouthWidth = dist(mouth[0], mouth[6]);
+  const eyesWidth = dist(leftEye[0], rightEye[3]);
+  return mouthWidth / eyesWidth;
 }
 
 async function startBiometricScan() {
@@ -443,17 +456,21 @@ async function startBiometricScan() {
       const displaySize = { width: video.videoWidth, height: video.videoHeight };
       faceapi.matchDimensions(canvas, displaySize);
       
-      let blinked = false;
+      const actions = [
+        { id: 'gauche', msg: "Tournez la tête à GAUCHE ⬅️" },
+        { id: 'droite', msg: "Tournez la tête à DROITE ➡️" },
+        { id: 'sourire', msg: "Faites un grand SOURIRE 😁" }
+      ];
+      const targetAction = actions[Math.floor(Math.random() * actions.length)];
+      let actionReussie = false;
       
-      bioStatus.textContent = "Veuillez cligner des yeux naturellement";
+      bioStatus.textContent = targetAction.msg;
       bioSpinner.style.display = 'none';
 
       const scanInterval = setInterval(async () => {
         if (!stream.active) return; 
 
-        // Options TRÈS sensibles pour s'assurer que ça détecte vite
         const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 });
-        
         const detections = await faceapi.detectAllFaces(video, options)
                                         .withFaceLandmarks()
                                         .withFaceDescriptors();
@@ -473,19 +490,25 @@ async function startBiometricScan() {
 
         const face = detections[0];
         const landmarks = face.landmarks;
-        const leftEye = landmarks.getLeftEye();
-        const rightEye = landmarks.getRightEye();
+        
+        let targetReached = false;
+        
+        if (targetAction.id === 'gauche') {
+           const yaw = computeYaw(landmarks);
+           if (yaw > 1.6) targetReached = true; 
+        } else if (targetAction.id === 'droite') {
+           const yaw = computeYaw(landmarks);
+           if (yaw < 0.6) targetReached = true;
+        } else if (targetAction.id === 'sourire') {
+           const smile = computeSmile(landmarks);
+           if (smile > 1.05) targetReached = true;
+        }
 
-        const leftEAR = computeEAR(leftEye);
-        const rightEAR= computeEAR(rightEye);
-        const ear = (leftEAR + rightEAR) / 2.0;
-
-        // Seuil très réduit pour un clignement facile et rapide
-        if (ear < 0.26) { 
-            blinked = true;
+        if (targetReached && !actionReussie) { 
+            actionReussie = true;
             bioStatus.textContent = "C'est bon ! Ne bougez plus un instant...";
             bioStatus.style.color = "var(--color-success)";
-        } else if (blinked && ear > 0.27) { 
+            
             clearInterval(scanInterval);
             
             setTimeout(async () => {
@@ -495,10 +518,10 @@ async function startBiometricScan() {
               stream.getTracks().forEach(t => t.stop());
               if (!finalDet) reject("Échec d'extraction finale du visage. Re-essayez.");
               else resolve(Array.from(finalDet.descriptor));
-            }, 200);
+            }, 300);
         } else {
-             if (!blinked) {
-                 bioStatus.textContent = "Veuillez Cligner des Yeux doucement";
+             if (!actionReussie) {
+                 bioStatus.textContent = targetAction.msg;
                  bioStatus.style.color = "white";
              }
         }
