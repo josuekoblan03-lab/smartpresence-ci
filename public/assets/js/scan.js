@@ -245,6 +245,13 @@ async function submitPresence(e) {
     return;
   }
 
+  // Fingerprint (Empreinte numérique du téléphone)
+  let deviceId = localStorage.getItem('smartpresence_device_id');
+  if (!deviceId) {
+    deviceId = 'DEV_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    localStorage.setItem('smartpresence_device_id', deviceId);
+  }
+
   // Spinner
   btn.disabled = true;
   btnText.textContent = 'Vérification en cours...';
@@ -259,7 +266,8 @@ async function submitPresence(e) {
         matricule,
         code_personnel: codePersonnel,
         qr_token:       qrToken,
-        session_id:     sessionId
+        session_id:     sessionId,
+        device_id:      deviceId
       })
     });
 
@@ -299,7 +307,7 @@ function showSuccess(nom, horodatage) {
     🕐 ${escHtml(horodatage || new Date().toLocaleString('fr-FR'))}
     <br><br>
     Votre présence a été marquée avec succès.<br>
-    Les 6 boucliers de sécurité ont été validés.
+    Les 7 boucliers de sécurité ont été validés.
   `;
 
   showToast('success', '✅ Présence enregistrée avec succès !', 5000);

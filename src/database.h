@@ -70,6 +70,7 @@ struct Presence {
     std::string etudiant_matricule;
     long long horodatage = 0;
     std::string ip_client;
+    std::string device_id;
     bool   valide = true;
 };
 
@@ -136,6 +137,7 @@ public:
     // ── Présences ──
     bool         mark_presence(const Presence& p);
     bool         has_presence(int session_id, int etudiant_id);
+    bool         has_device_voted(int session_id, const std::string& device_id);
     std::vector<Presence> list_presences(int session_id);
     int          count_presences_today();
     int          count_presences_session(int session_id);

@@ -379,6 +379,7 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
     std::string code_personnel = utils::json_get_str(req.body, "code_personnel");
     std::string qr_token       = utils::json_get_str(req.body, "qr_token");
     int session_id             = (int)utils::json_get_int(req.body, "session_id");
+    std::string device_id      = utils::json_get_str(req.body, "device_id");
 
     // Fallback form data
     if (matricule.empty()) {
@@ -386,6 +387,7 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
         matricule      = params["matricule"];
         code_personnel = params["code_personnel"];
         qr_token       = params["qr_token"];
+        device_id      = params["device_id"];
         if (!params["session_id"].empty()) session_id = std::stoi(params["session_id"]);
     }
 
@@ -408,6 +410,7 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
     attempt.qr_token        = qr_token;
     attempt.code_personnel  = code_personnel;
     attempt.ip_client       = req.client_ip;
+    attempt.device_id       = device_id;
     attempt.timestamp       = utils::now_unix();
 
     // ── Vérification des 6 boucliers ──
@@ -442,6 +445,7 @@ HttpResponse mark_presence(const HttpRequest& req, Database& db) {
     p.etudiant_id = etudiant.id;
     p.horodatage  = utils::now_unix();
     p.ip_client   = req.client_ip;
+    p.device_id   = device_id;
     p.valide      = true;
 
     if (!db.mark_presence(p)) {

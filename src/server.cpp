@@ -191,6 +191,19 @@ HttpRequest HttpServer::parse_request(const std::string& raw, const std::string&
         req.is_sse = true;
     }
 
+    // Récupérer la VRAIE IP si derrière un Proxy (Railway / Nginx)
+    auto fwd = req.headers.find("x-forwarded-for");
+    if (fwd != req.headers.end() && !fwd->second.empty()) {
+        std::string ip_list = fwd->second;
+        // Prendre la première IP avant la virgule
+        auto comma = ip_list.find(',');
+        if (comma != std::string::npos) {
+            req.client_ip = utils::trim(ip_list.substr(0, comma));
+        } else {
+            req.client_ip = utils::trim(ip_list);
+        }
+    }
+
     return req;
 }
 

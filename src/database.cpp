@@ -114,10 +114,14 @@ void Database::create_schema() {
             etudiant_id INTEGER REFERENCES etudiants(id),
             horodatage  INTEGER DEFAULT (strftime('%s','now')),
             ip_client   TEXT,
+            device_id   TEXT,
             valide      INTEGER DEFAULT 1,
             UNIQUE(session_id, etudiant_id)
         );
     )");
+
+    // Migration (ignore l'erreur si la colonne existe déjà)
+    exec("ALTER TABLE presences ADD COLUMN device_id TEXT;");
 
     // ── Logs de fraude ──
     exec(R"(
@@ -445,6 +449,23 @@ int Database::create_session(const SessionCours& s) {
     return new_id;
 }
 
+// Vérifier si une empreinte matérielle a déjà voté pour cette session
+bool Database::has_device_voted(int session_id, const std::string& device_id) {
+    if (device_id.empty()) return false;
+    sqlite3_stmt* stmt = prepare(
+        "SELECT COUNT(*) FROM presences WHERE session_id = ? AND device_id = ?"
+    );
+    if (!stmt) return false;
+    sqlite3_bind_int(stmt,  1, session_id);
+    sqlite3_bind_text(stmt, 2, device_id.c_str(), -1, SQLITE_TRANSIENT);
+    int count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        count = sqlite3_column_int(stmt, 0);
+    }
+    sqlite3_finalize(stmt);
+    return count > 0;
+}
+
 SessionCours Database::find_session_by_id(int id) {
     SessionCours s;
     auto rows = query(
@@ -544,15 +565,16 @@ std::vector<SessionCours> Database::list_sessions(int enseignant_id, int limit) 
 // ──────────────────────────────────────────────────────────────
 bool Database::mark_presence(const Presence& p) {
     sqlite3_stmt* stmt = prepare(
-        "INSERT OR IGNORE INTO presences (session_id, etudiant_id, horodatage, ip_client, valide)"
-        " VALUES (?, ?, ?, ?, ?)"
+        "INSERT OR IGNORE INTO presences (session_id, etudiant_id, horodatage, ip_client, device_id, valide)"
+        " VALUES (?, ?, ?, ?, ?, ?)"
     );
     if (!stmt) return false;
     sqlite3_bind_int(stmt,  1, p.session_id);
     sqlite3_bind_int(stmt,  2, p.etudiant_id);
     sqlite3_bind_int64(stmt,3, p.horodatage > 0 ? p.horodatage : utils::now_unix());
     sqlite3_bind_text(stmt, 4, p.ip_client.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt,  5, p.valide ? 1 : 0);
+    sqlite3_bind_text(stmt, 5, p.device_id.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,  6, p.valide ? 1 : 0);
     bool ok = sqlite3_step(stmt) == SQLITE_DONE;
     sqlite3_finalize(stmt);
     return ok && sqlite3_changes(db_) > 0;

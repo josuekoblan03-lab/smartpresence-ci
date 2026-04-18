@@ -161,6 +161,39 @@ ShieldResult check_rate_limit(const PresenceAttempt& attempt,
 }
 
 // ──────────────────────────────────────────────────────────────
+// Bouclier 7 : Unicité de l'appareil (Empreinte numérique)
+// Un appareil ne peut scripter une présence que pour UN seul étudiant par session
+// ──────────────────────────────────────────────────────────────
+ShieldResult check_device_uniqueness(const PresenceAttempt& attempt,
+                                      Database& db) {
+    ShieldResult r;
+    r.shield_name = "Bouclier 7 - Unicité Matérielle";
+
+    // Si on n'a pas de device_id (vieux navigateur ou proxy bloquant localStorage)
+    // On passe, ce n'est pas bloquant, on laisse Bouclier 6 (IP) gérer les abus massifs.
+    if (attempt.device_id.empty()) {
+        r.message = "Aucune empreinte (Tolérance appliquée)";
+        return r;
+    }
+
+    // Vérifier si ce device_id a déjà été utilisé POUR UN AUTRE étudiant dans cette session.
+    // has_device_voted() renvoie true SI et SEULEMENT SI le device a voté (peu importe l'étudiant).
+    // Mais si l'étudiant courant EST celui qui a voté avec ce device, l'anti-double-scan (Bouclier 4)
+    // s'en chargera. Donc on doit bloquer si l'empreinte existe ET n'appartient pas à la tentative actuelle ?
+    // Simplification : Bouclier 4 bloque le double-scan de l'étudiant.
+    // Si Bouclier 4 n'a pas déclenché, c'est que l'étudiant courant n'a pas de présence.
+    // Si le device a une présence, c'est que le device a scanné pour qq d'autre !
+    if (db.has_device_voted(attempt.session_id, attempt.device_id)) {
+        r.passed  = false;
+        r.message = "Fraude: Ce téléphone a déjà validé la présence d'un autre étudiant durant cette session.";
+        return r;
+    }
+
+    r.message = "Empreinte numérique unique (Autorisée)";
+    return r;
+}
+
+// ──────────────────────────────────────────────────────────────
 // Vérification globale : passe tous les boucliers dans l'ordre
 // ──────────────────────────────────────────────────────────────
 ShieldResult verify_all(const PresenceAttempt& attempt,
@@ -194,6 +227,10 @@ ShieldResult verify_all(const PresenceAttempt& attempt,
     // Bouclier 4 : anti double-scan
     ShieldResult r4 = check_no_duplicate(attempt, db);
     if (!r4.passed) { std::cout << "[Shields] ❌ " << r4.shield_name << std::endl; return r4; }
+
+    // Bouclier 7 : unicité de l'appareil (anti l'ami qui scan pour tout le monde)
+    ShieldResult r7 = check_device_uniqueness(attempt, db);
+    if (!r7.passed) { std::cout << "[Shields] ❌ " << r7.shield_name << std::endl; return r7; }
 
     std::cout << "[Shields] ✅ Tous les boucliers validés" << std::endl;
 

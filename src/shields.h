@@ -21,6 +21,7 @@ struct PresenceAttempt {
     std::string qr_token;          // Token scanné
     std::string code_personnel;    // Code PIN de l'étudiant
     std::string ip_client;
+    std::string device_id;         // Empreinte numérique du navigateur
     long long   timestamp;
 };
 
